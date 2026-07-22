@@ -1,0 +1,83 @@
+# commits.yaml —— 悉尼远程退租案例的 commit 点定义
+# 数据来源：远程退租案例研究_GateFix_Paper2素材.md 第5节"Commit Gates"表 + 7月新增的空运纸箱事件
+#
+# 每个 commit 定义：
+#   cost_reverse: 撤销这个动作的成本（inf = 完全不可逆）
+#   value:        这个动作本身的价值/涉及金额（用于 IsCommit 的 λ·Value 判定，单位：AUD 等价）
+#   cost_fix:     一旦出错，修复成本（用于 on/in-loop 划界）
+#   precondition_fn: preconditions/sydney_case.py 里对应的打分函数名
+#   bypass_to_human: 证据人情类、机器不可组装，直接旁路给人，不进入 4D-CQ 计算
+#   soft_commit: 软 commit（expectation-setting speech act），走 expectation_gate 而不是 quality_score
+#   risk_ext: 外部或有闸门（如有），Commit=True 之后仍未清零的残余风险
+
+commits:
+
+  - id: discard_items
+    name_cn: "扔弃物品"
+    irreversibility: "物品不可恢复"
+    cost_reverse: inf
+    value: 50
+    cost_fix: 0
+    precondition_fn: score_discard_items
+
+  - id: physical_handover
+    name_cn: "实物交割（家电出门）"
+    irreversibility: "交割即终"
+    cost_reverse: inf
+    value: 100
+    cost_fix: 0
+    precondition_fn: score_physical_handover
+
+  - id: key_to_building_manager
+    name_cn: "钥匙移交楼管（Building Manager）"
+    irreversibility: "失去直接控制"
+    cost_reverse: 50
+    value: 200
+    cost_fix: 30
+    precondition_fn: score_key_to_building_manager
+
+  - id: key_to_agent
+    name_cn: "钥匙移交中介（终极 commit）"
+    irreversibility: "失去物理访问权，一切遗漏无法补救"
+    cost_reverse: inf
+    value: 5000
+    cost_fix: 0
+    precondition_fn: score_key_to_agent
+
+  - id: bond_claim_confirm
+    name_cn: "Bond claim 确认"
+    irreversibility: "资金结算"
+    cost_reverse: 500
+    value: 3000
+    cost_fix: 200
+    precondition_fn: score_bond_claim
+
+  - id: friend_compensation
+    name_cn: "对朋友补偿支付"
+    irreversibility: "钱出去且社交效果一次成型"
+    cost_reverse: inf
+    value: 388
+    cost_fix: 0
+    bypass_to_human: true
+    bypass_reason: "人情类证据机器不可组装（关系深浅/对方性格/开口语气不在 API 中）"
+
+  - id: expectation_setting
+    name_cn: "（软）预期设立类言语行为"
+    irreversibility: "预期无法无痕撤回"
+    cost_reverse: inf
+    value: 1000
+    cost_fix: 0
+    soft_commit: true
+    precondition_fn: score_expectation_setting
+
+  - id: air_freight_dispatch
+    name_cn: "空运纸箱交运（加固决策）"
+    irreversibility: "交运后途中损坏不可逆，只能靠加固降低概率、不能消除"
+    cost_reverse: inf
+    value: 17100
+    cost_fix: 0
+    precondition_fn: score_air_freight_dispatch
+    risk_ext:
+      p_inspect: 0.15
+      loss_if_inspected: 1240
+      note: "海关抽查是概率性事件，agent 不可控；触发后的损失可被证据质量（如实申报+凭证）压低，不能靠改数字降低"
