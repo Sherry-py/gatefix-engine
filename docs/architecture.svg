@@ -1,0 +1,72 @@
+<svg viewBox="0 0 1500 900" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<marker id="arrM" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6B6B68"/></marker>
+<marker id="arrRed" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#A03B45"/></marker>
+<marker id="arrOr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#C9820A"/></marker>
+<marker id="arrGr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2F6B44"/></marker>
+<marker id="arrBl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#3E6A9C"/></marker>
+</defs>
+<rect x="0" y="0" width="1500" height="900" rx="0" fill="#FFFFFF" stroke="none" stroke-width="0"/>
+<text x="750.0" y="34" font-size="20" font-weight="700" fill="#2A2A28" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">最小内核：任何领域都长这样的 6 节点引擎骨架</text>
+<text x="750.0" y="56" font-size="12" font-weight="400" fill="#7A7A74" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">悉尼退租 / Agent支付 / 客服工单——节点数和边数不随任务变复杂而增加，变的只是每个节点背后的数据</text>
+<rect x="300" y="66" width="900" height="32" rx="8" fill="#FCEACB" stroke="#C9820A" stroke-width="1.6"/>
+<text x="750.0" y="87" font-size="13.5" font-weight="700" fill="#7A4A0A" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">核心不变式：Commit(a,E) = Human_Gate(a) ∧ ⋀ᵢ Pᵢ(E,θᵢ)　i∈{R,C,O,Ro}</text>
+<rect x="60" y="130" width="220" height="80" rx="12" fill="#FFFBEB" stroke="#E6D9A0" stroke-width="1.6"/>
+<text x="170.0" y="166.0" font-size="13.5" font-weight="700" fill="#8A7A2E" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">① 组装上下文</text>
+<text x="170.0" y="186.0" font-size="9.5" font-weight="400" fill="#6E6E68" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">本轮证据 + 节点图快照</text>
+<text x="170" y="226" font-size="9" font-weight="400" fill="#8A7A2E" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">E ← 证据聚合（Pᵢ/Q 的输入，无独立公式）</text>
+<rect x="60" y="300" width="220" height="80" rx="12" fill="#F1EEFB" stroke="#7B6CC8" stroke-width="1.6"/>
+<text x="170.0" y="336.0" font-size="13.5" font-weight="700" fill="#4E4390" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">② LLM 推理提案</text>
+<text x="170.0" y="356.0" font-size="9.5" font-weight="400" fill="#6E6E68" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">只读世界，只出候选动作 a + 证据 E</text>
+<text x="170" y="396" font-size="8.3" font-weight="400" fill="#4E4390" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">IsCommit(a)=[Cost_reverse=∞]∨[Cost_reverse&gt;λ·Value(a)]</text>
+<rect x="60" y="470" width="220" height="80" rx="12" fill="#FDECEE" stroke="#CE5560" stroke-width="1.6"/>
+<text x="170.0" y="506.0" font-size="13.5" font-weight="700" fill="#A03B45" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">③ Precondition 判定</text>
+<text x="170.0" y="526.0" font-size="9.5" font-weight="400" fill="#6E6E68" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">代码执行，算出 Q(a,E)</text>
+<text x="170" y="566" font-size="8.8" font-weight="400" fill="#A03B45" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">Q(a,E) = w_R·R + w_C·C + w_O·O + w_Ro·Ro</text>
+<polygon points="450,455.0 535.0,510 450,565.0 365.0,510" fill="#FFF3E4" stroke="#D98E3F" stroke-width="1.8"/>
+<text x="450" y="515" font-size="12.5" font-weight="700" fill="#8A5A1E" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">④ 三态路由</text>
+<text x="450" y="601" font-size="8.6" font-weight="400" fill="#8A5A1E" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">Route(a,E)：Q≥τ_pass→PASS；τ_repair≤Q&lt;τ_pass∧k&lt;k_dry→AUTO_REPAIR；否则→ESCALATE</text>
+<rect x="760" y="380" width="220" height="80" rx="12" fill="#EAF6EE" stroke="#4E9B66" stroke-width="1.6"/>
+<text x="870.0" y="416.0" font-size="13.5" font-weight="700" fill="#2F6B44" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">⑤a 执行</text>
+<text x="870.0" y="436.0" font-size="9.5" font-weight="400" fill="#6E6E68" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">PASS 分支：调用工具/发送/落盘</text>
+<text x="870" y="476" font-size="8.8" font-weight="400" fill="#2F6B44" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">此处 Commit(a,E) 已判定为 True</text>
+<rect x="760" y="620" width="220" height="80" rx="12" fill="#E5F0FA" stroke="#4C89C8" stroke-width="1.6"/>
+<text x="870.0" y="656.0" font-size="13.5" font-weight="700" fill="#2F5E8C" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">⑤b 人工审批</text>
+<text x="870.0" y="676.0" font-size="9.5" font-weight="400" fill="#6E6E68" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">ESCALATE 分支：人终审</text>
+<text x="870" y="716" font-size="8.3" font-weight="400" fill="#2F5E8C" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">此处产出 Human_Gate(a)∈{True,False}；LoopMode(a)=IN_THE_LOOP 时必经</text>
+<rect x="1120" y="470" width="240" height="90" rx="12" fill="#EAF6EE" stroke="#4E9B66" stroke-width="1.6"/>
+<text x="1240.0" y="511.0" font-size="13.5" font-weight="700" fill="#2F6B44" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">⑥ 写回 ＋ 状态重派生</text>
+<text x="1240.0" y="531.0" font-size="9.5" font-weight="400" fill="#6E6E68" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">证据落盘，节点图更新为下一轮输入</text>
+<text x="1240" y="576" font-size="8.8" font-weight="700" fill="#2F6B44" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">运行不变式：状态 = f(证据)</text>
+<path d="M170 210 L170 300" fill="none" stroke="#6B6B68" stroke-width="1.6"  marker-end="url(#arrM)"/>
+<text x="182" y="258" font-size="9.5" font-weight="400" fill="#55554F" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">证据+快照</text>
+<path d="M170 380 L170 470" fill="none" stroke="#6B6B68" stroke-width="1.6"  marker-end="url(#arrM)"/>
+<text x="182" y="428" font-size="9.5" font-weight="400" fill="#55554F" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">候选动作a+证据E</text>
+<path d="M280 510 L365 510" fill="none" stroke="#A03B45" stroke-width="1.6"  marker-end="url(#arrRed)"/>
+<text x="322" y="500" font-size="9.5" font-weight="400" fill="#A03B45" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">Q(a,E)</text>
+<path d="M545 470 C620 430, 690 405, 755 400" fill="none" stroke="#2F6B44" stroke-width="1.6"  marker-end="url(#arrGr)"/>
+<text x="650" y="420" font-size="10" font-weight="700" fill="#2F6B44" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">PASS</text>
+<path d="M545 555 C620 590, 690 610, 755 618" fill="none" stroke="#3E6A9C" stroke-width="1.6"  marker-end="url(#arrBl)"/>
+<text x="650" y="610" font-size="10" font-weight="700" fill="#3E6A9C" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">ESCALATE</text>
+<path d="M420 460 C300 380, 260 350, 285 340" fill="none" stroke="#C9820A" stroke-width="1.6" stroke-dasharray="6,4" marker-end="url(#arrOr)"/>
+<text x="300" y="300" font-size="10" font-weight="700" fill="#8A5A1E" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">AUTO_REPAIR</text>
+<text x="300" y="316" font-size="9.5" font-weight="400" fill="#8A5A1E" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">补证，≤ k_dry 轮</text>
+<path d="M870 620 C1000 560, 1060 520, 1115 495" fill="none" stroke="#3E6A9C" stroke-width="1.6"  marker-end="url(#arrBl)"/>
+<text x="1000" y="555" font-size="9.5" font-weight="400" fill="#3E6A9C" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">批准→执行 / 驳回意见</text>
+<path d="M980 420 C1050 440, 1090 455, 1118 465" fill="none" stroke="#2F6B44" stroke-width="1.6"  marker-end="url(#arrGr)"/>
+<text x="1030" y="440" font-size="9.5" font-weight="400" fill="#2F6B44" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">执行结果</text>
+<path d="M1180 470 C1180 90, 400 40, 170 128" fill="none" stroke="#2F6B44" stroke-width="1.6" stroke-dasharray="8,5" marker-end="url(#arrGr)"/>
+<text x="750.0" y="116" font-size="11" font-weight="700" fill="#2F6B44" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">下一循环 —— 状态只因证据落地才翻转，不因宣称</text>
+<rect x="60" y="740" width="670" height="130" rx="12" fill="#F7F5EE" stroke="#DEDED8" stroke-width="1.6"/>
+<text x="80" y="766" font-size="13" font-weight="700" fill="#3A3A36" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">这张图为什么故意画得很小</text>
+<text x="80" y="790" font-size="10.5" font-weight="400" fill="#5C5C56" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">6个节点、约8条边——这是任何领域都不变的骨架。悉尼退租、agent支付、</text>
+<text x="80" y="808" font-size="10.5" font-weight="400" fill="#5C5C56" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">客服工单，走的都是这6步；边上标的是流动的数据（证据/分数/决策），</text>
+<text x="80" y="826" font-size="10.5" font-weight="400" fill="#5C5C56" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">不是叙事性的「然后」。任务变复杂，节点契约不变，只有数据变大变多。</text>
+<text x="80" y="848" font-size="10" font-weight="400" fill="#8A8A84" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">对应 Graph Engineering：节点=有界任务，边=数据契约，图的拓扑不随复杂度膨胀</text>
+<rect x="770" y="740" width="670" height="130" rx="12" fill="#FDF3E3" stroke="#D9A441" stroke-width="1.6"/>
+<text x="790" y="766" font-size="13" font-weight="700" fill="#8A5A1E" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">复杂的那张图（v5）在做什么</text>
+<text x="790" y="790" font-size="10.5" font-weight="400" fill="#6B5410" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">cognitive_loop_v5.svg 不是另一套逻辑，是这6个节点在悉尼案例上</text>
+<text x="790" y="808" font-size="10.5" font-weight="400" fill="#6B5410" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">完全展开后的样子——每个节点拆成了具体的子步骤（态势评估/节点</text>
+<text x="790" y="826" font-size="10.5" font-weight="400" fill="#6B5410" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">选择/动作分类…），工具类型、执行器合约都是这一案例的配置数据。</text>
+<text x="790" y="848" font-size="10" font-weight="700" fill="#8A5A1E" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">复杂度来自案例细节被画进了引擎图，不代表任务本身逻辑线过多</text>
+</svg>
