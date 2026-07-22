@@ -5,6 +5,15 @@ Rosebery 公寓远程退租真实发生过的事——包括 7 月新增的空�
 代码跑的是真实数据，不是虚构 case。第三方（中介、楼管、货代等）的姓名已替换为身份角色标注，
 金额与事实细节保留真实。
 
+## 机制图
+
+![GateFix core engine — six-node skeleton with formula bindings](docs/architecture.svg)
+
+这张图是引擎的最小骨架：组装上下文→LLM 推理提案→Precondition 判定→三态路由→执行/人工审批→写回，
+每个节点标注了对应的公式。下面的 `gate.py` / `engine.py` 就是这张图的直接代码实现——图里的
+③Precondition 判定对应 `preconditions/sydney_case.py` 里的打分函数，④三态路由对应 `gate.py` 里的
+`GateConfig.route()`，⑤a/⑤b 对应 `engine.py` 里 AUTO_REPAIR 循环和 ESCALATE/BYPASS_TO_HUMAN 分支。
+
 ## 这个项目证明什么
 
 GateFix 的核心主张是：agent 能不能自主执行一个动作，不该由"有没有一个确认按钮"决定，
@@ -33,7 +42,6 @@ GateFix 的核心主张是：agent 能不能自主执行一个动作，不该由
 ## 怎么跑
 
 ```bash
-cd gatefix_demo
 pip install pyyaml   # 唯一外部依赖
 python engine.py run --case=sydney_move
 python engine.py run --case=sydney_move --verbose   # 打印每一轮 AUTO_REPAIR 的细节
@@ -46,7 +54,9 @@ python engine.py run --case=sydney_move --verbose   # 打印每一轮 AUTO_REPAI
 ## 文件结构
 
 ```
-gatefix_demo/
+.
+├── docs/
+│   └── architecture.svg             # 机制图：六节点最小骨架 + 公式绑定
 ├── gate.py                          # 引擎核心：GateConfig（阈值/权重）+ GateRecord（判定记录结构）
 │                                     # quality_score / route / is_commit / loop_mode /
 │                                     # expectation_gate / expected_external_risk 六个公式的代码实现
