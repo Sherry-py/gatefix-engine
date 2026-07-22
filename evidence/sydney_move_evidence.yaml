@@ -1,0 +1,48 @@
+# evidence/sydney_case_evidence.yaml —— 每个 commit 对应的真实/贴近真实的证据快照
+# 这不是造的假数据——数值和事实来自案例文档，包括故意保留了两个真实发生过的"证据不足"场景
+# （RBO 账户户名不符 / 钥匙数量首次核对不全），用来验证 gate 是否真的会正确路由到 ESCALATE / AUTO_REPAIR。
+
+discard_items:
+  friend_selected_done: true
+  organizer_selected_done: true
+  id_documents_removed: true
+  personal_info_papers_removed: true
+
+physical_handover:
+  payment_received: true
+  buyer_identity_confirmed: true
+  pickup_window_confirmed: true
+  building_access_aligned_with_organizer: true
+
+key_to_building_manager:
+  agent_written_consent: true
+  consent_source: "中介（Leasing Agent）邮件书面确认"
+
+key_to_agent:
+  # 第一轮：证据不全（真实发生过的情况）——钥匙数量只有口头印象，没有书面来源
+  empty_house_photos_timestamped: true
+  key_count_source: "memory"          # 应该是 'agent_email'，这里模拟"记忆"这个薄弱来源
+  key_count_matches: null              # 未知，需要补证
+  cleaning_before_power_off: true
+  utility_meter_photos: true
+
+bond_claim_confirm:
+  deductions: ["cleaning_fee", "break_fee_1100"]
+  approved_deductions: ["cleaning_fee", "break_fee_1100"]
+  refund_account_name: "伴侣（Partner）"    # 真实情况：退款账户是伴侣的
+  client_name: "委托人本人（Client）"        # 委托人本人——两者不一致，这是真实的 RBO 案例
+  refund_account_still_active: true
+
+expectation_setting:
+  promised_amount: 1000
+  feasibility_probe_done: true          # 先问朋友（报价参考）造基准价
+  feasibility_evidence: "朋友报价参考（Friend quote）+ 二手交易平台挂单反馈"
+
+air_freight_dispatch:
+  box_count: 10
+  thin_boxes_count: 5
+  cracked_boxes_count: 1
+  reinforced_boxes_count: 4            # 加固决策：剩余 4 箱已加固
+  overweight_kg: 11
+  weight_charge_verified: true          # 11kg*80=880，已核实计算无误
+  balance_formula_verified: true        # 6061+5*1155=11836，+880-500-800=11416，已核实

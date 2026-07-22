@@ -1,0 +1,53 @@
+# bindings.yaml —— 每个 commit 绑定谁来执行、通过什么通道
+# 本案例关键路径上零 API——现实形态是 computer-use（GUI操作）+ 人类执行器混合体，不是 API 编排器。
+# 这份文件记录的是"权在谁的账户域"，是 demo 叙事层，engine.py 不会真的去调用这些人类执行器。
+
+bindings:
+
+  discard_items:
+    executor_type: human
+    executor: "整理师（Organizer）"
+    channel: "二手交易平台私信 → 现场"
+    incentive: "市价服务"
+
+  physical_handover:
+    executor_type: human
+    executor: "二手买家（自带卡车）"
+    channel: "二手交易平台评论区 + 私信"
+    incentive: "免费自取，付 $100"
+
+  key_to_building_manager:
+    executor_type: human
+    executor: "楼管（Building Manager）"
+    channel: "WhatsApp"
+    incentive: "实物赠与（$150 玩具）"
+
+  key_to_agent:
+    executor_type: human
+    executor: "中介（Leasing Agent）"
+    channel: "邮件"
+    incentive: "职务行为"
+
+  bond_claim_confirm:
+    executor_type: human
+    executor: "中介（Leasing Agent）→ RBO 平台"
+    channel: "RBO（NSW Fair Trading）网页"
+    incentive: "职务行为"
+
+  friend_compensation:
+    executor_type: human
+    executor: "朋友"
+    channel: "微信"
+    incentive: "收益分成失败后现金+实物结清"
+
+  expectation_setting:
+    executor_type: human
+    executor: "委托人本人"
+    channel: "微信消息"
+    incentive: "N/A——这是委托人自己要过 gate 的言语行为"
+
+  air_freight_dispatch:
+    executor_type: human
+    executor: "货代公司代表（Freight Forwarder Rep）"
+    channel: "微信"
+    incentive: "商业服务合同"
