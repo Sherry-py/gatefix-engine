@@ -1,4 +1,4 @@
-# evidence/sydney_case_evidence.yaml —— 每个 commit 对应的真实/贴近真实的证据快照
+# evidence/sydney_move_evidence.yaml —— 每个 commit 对应的真实/贴近真实的证据快照
 # 这不是造的假数据——数值和事实来自案例文档，包括故意保留了两个真实发生过的"证据不足"场景
 # （RBO 账户户名不符 / 钥匙数量首次核对不全），用来验证 gate 是否真的会正确路由到 ESCALATE / AUTO_REPAIR。
 
