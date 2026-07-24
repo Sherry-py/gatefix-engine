@@ -6,6 +6,12 @@ engine.py —— 运行时引擎：组装上下文 → LLM 推理提案（此 de
 运行方式：
     python engine.py run --case=sydney_move
     python engine.py run --case=sydney_move --verbose
+
+按 --case 动态加载三份场景配置（commits/<case>_commits.yaml、
+bindings/<case>_bindings.yaml、evidence/<case>_evidence.yaml、
+preconditions/<case>.py），engine.py 和 gate.py 本身不含任何场景特定逻辑。
+目前只有 sydney_move 这一个场景跑通过——这是架构上支持多场景，
+不是"已经在多个场景上验证过可复用"的实测结论。
 """
 
 import argparse
@@ -17,7 +23,6 @@ from datetime import datetime, timezone
 import yaml
 
 from gate import GateConfig, GateRecord
-from preconditions.sydney_case import REGISTRY, REPAIR_REGISTRY
 
 BASE_DIR = Path(__file__).parent
 
@@ -35,13 +40,20 @@ def parse_number(v):
 
 
 def run_case(case: str, verbose: bool = False):
-    commits_path = BASE_DIR / "commits.yaml"
-    bindings_path = BASE_DIR / "bindings.yaml"
+    commits_path = BASE_DIR / "commits" / f"{case}_commits.yaml"
+    bindings_path = BASE_DIR / "bindings" / f"{case}_bindings.yaml"
     evidence_path = BASE_DIR / "evidence" / f"{case}_evidence.yaml"
 
     commits = load_yaml(commits_path)["commits"]
     bindings = load_yaml(bindings_path)["bindings"]
     all_evidence = load_yaml(evidence_path)
+
+    # 场景特定的打分函数模块——preconditions/<case>.py 必须导出 REGISTRY
+    # （必须）和 REPAIR_REGISTRY（可选）。这是"engine.py 不含场景逻辑"的
+    # 落地方式：新场景只需要新增这个模块，不需要改这里的 import。
+    precondition_module = importlib.import_module(f"preconditions.{case}")
+    REGISTRY = precondition_module.REGISTRY
+    REPAIR_REGISTRY = getattr(precondition_module, "REPAIR_REGISTRY", {})
 
     config = GateConfig()
     records = []
@@ -202,7 +214,7 @@ def main():
     sub = parser.add_subparsers(dest="command", required=True)
 
     run_parser = sub.add_parser("run", help="运行一个 case")
-    run_parser.add_argument("--case", default="sydney_move", help="case 名（对应 evidence/<case>_evidence.yaml）")
+    run_parser.add_argument("--case", default="sydney_move", help="case 名（决定加载 commits/bindings/evidence/preconditions 四处的哪一套配置）")
     run_parser.add_argument("--verbose", action="store_true", help="打印每一轮 AUTO_REPAIR 的详情")
 
     args = parser.parse_args()

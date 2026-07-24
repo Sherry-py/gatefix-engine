@@ -1,11 +1,11 @@
-# commits.yaml —— 悉尼远程退租案例的 commit 点定义
-# 数据来源：远程退租案例研究_GateFix_Paper2素材.md 第5节"Commit Gates"表 + 7月新增的空运纸箱事件
+# commits/sydney_move_commits.yaml —— 悉尼远程退租案例（case=sydney_move）的 commit 点定义
+# 数据来源：私人案例笔记（未发表，非论文）第5节"Commit Gates"表 + 7月新增的空运纸箱事件
 #
 # 每个 commit 定义：
 #   cost_reverse: 撤销这个动作的成本（inf = 完全不可逆）
 #   value:        这个动作本身的价值/涉及金额（用于 IsCommit 的 λ·Value 判定，单位：AUD 等价）
 #   cost_fix:     一旦出错，修复成本（用于 on/in-loop 划界）
-#   precondition_fn: preconditions/sydney_case.py 里对应的打分函数名
+#   precondition_fn: preconditions/sydney_move.py 里对应的打分函数名
 #   bypass_to_human: 证据人情类、机器不可组装，直接旁路给人，不进入 4D-CQ 计算
 #   soft_commit: 软 commit（expectation-setting speech act），走 expectation_gate 而不是 quality_score
 #   risk_ext: 外部或有闸门（如有），Commit=True 之后仍未清零的残余风险

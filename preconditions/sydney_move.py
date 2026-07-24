@@ -1,13 +1,21 @@
 """
-preconditions/sydney_case.py —— 悉尼退租案例的 precondition 判定函数（Pᵢ(E,θᵢ) 的具体实现）
+preconditions/sydney_move.py —— 悉尼退租案例（case=sydney_move）的 precondition 判定函数
+（Pᵢ(E,θᵢ) 的具体实现）
 
 每个函数：输入这个 commit 的 evidence（一个 dict），输出：
     R, C, O, Ro       ——4D-CQ 四个维度的分数，每个 ∈ [0,1]
     verifiable_ext    ——这个 commit 如果证据不够，缺口能不能靠外部核查补齐（AUTO_REPAIR 的前提）
     notes             ——给人看的一句话解释，写进 Gate Record
 
-换个领域，只需要重写这个文件里的函数（以及 commits.yaml、bindings.yaml），
-gate.py 和 engine.py 一行都不用改——这是"换个领域只换三份配置，引擎本身不动"的具体体现。
+换个领域：新增 preconditions/<new_case>.py（导出同样结构的 REGISTRY，
+REPAIR_REGISTRY 可选）+ commits/<new_case>_commits.yaml +
+bindings/<new_case>_bindings.yaml + evidence/<new_case>_evidence.yaml，
+用 --case=<new_case> 跑。engine.py 通过 importlib 按 case 名动态加载
+这四处，不需要改 import。
+
+注意：这是架构上的设计（engine.py/gate.py 不含场景特定逻辑），目前只有
+sydney_move 这一个场景实际跑通过验证——"换场景不用改引擎"还没有第二个
+真实场景实测过，读到这里的人不要把它当成已验证的复用性结论。
 """
 
 
