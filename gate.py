@@ -64,7 +64,7 @@ class GateConfig:
         """Send(msg) 被允许 ⟺ ¬ContainsPromise(msg) ∨ HasFeasibilityEvidence(msg)"""
         return (not contains_promise) or has_feasibility_evidence
 
-    # ---------- ⑥ 外部或有闸门（新增，7 月关税事件） ----------
+    # ---------- ⑥ 外部或有闸门（新增，海关抽查风险场景） ----------
     @staticmethod
     def expected_external_risk(p_inspect: float, loss_if_inspected: float) -> float:
         """Risk_ext(a) = p_inspect(a) · Loss(a∣inspected)

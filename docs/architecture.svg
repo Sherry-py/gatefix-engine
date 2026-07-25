@@ -64,9 +64,9 @@
 <text x="80" y="826" font-size="10.5" font-weight="400" fill="#5C5C56" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">不是叙事性的「然后」。任务变复杂，节点契约不变，只有数据变大变多。</text>
 <text x="80" y="848" font-size="10" font-weight="400" fill="#8A8A84" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">对应 Graph Engineering：节点=有界任务，边=数据契约，图的拓扑不随复杂度膨胀</text>
 <rect x="770" y="740" width="670" height="130" rx="12" fill="#FDF3E3" stroke="#D9A441" stroke-width="1.6"/>
-<text x="790" y="766" font-size="13" font-weight="700" fill="#8A5A1E" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">复杂的那张图（v5）在做什么</text>
-<text x="790" y="790" font-size="10.5" font-weight="400" fill="#6B5410" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">cognitive_loop_v5.svg 不是另一套逻辑，是这6个节点在悉尼案例上</text>
-<text x="790" y="808" font-size="10.5" font-weight="400" fill="#6B5410" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">完全展开后的样子——每个节点拆成了具体的子步骤（态势评估/节点</text>
-<text x="790" y="826" font-size="10.5" font-weight="400" fill="#6B5410" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">选择/动作分类…），工具类型、执行器合约都是这一案例的配置数据。</text>
-<text x="790" y="848" font-size="10" font-weight="700" fill="#8A5A1E" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">复杂度来自案例细节被画进了引擎图，不代表任务本身逻辑线过多</text>
+<text x="790" y="766" font-size="13" font-weight="700" fill="#8A5A1E" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">怎么读这张图（写给非技术读者）</text>
+<text x="790" y="790" font-size="10.5" font-weight="400" fill="#6B5410" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">6个方框＝6个动作节点，箭头＝证据和决定在节点之间怎么流动。</text>
+<text x="790" y="808" font-size="10.5" font-weight="400" fill="#6B5410" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">绿色（PASS）＝证据够，直接放行；蓝色（ESCALATE）＝证据不够，</text>
+<text x="790" y="826" font-size="10.5" font-weight="400" fill="#6B5410" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">必须叫人拍板；橙色虚线（AUTO_REPAIR）＝有缺口但能自动补一次证据。</text>
+<text x="790" y="848" font-size="10" font-weight="700" fill="#8A5A1E" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">机器不会替人「决定」，它只负责判断这件事够不够格自己往下做</text>
 </svg>

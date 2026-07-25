@@ -127,7 +127,7 @@ def score_expectation_setting(evidence: dict) -> dict:
 
 
 def score_air_freight_dispatch(evidence: dict) -> dict:
-    """空运纸箱交运（7 月新增的真实事件）：一箱已裂 → 材质缺陷是批次属性，不是孤例，
+    """空运纸箱交运（案例后期新增的真实事件）：一箱已裂 → 材质缺陷是批次属性，不是孤例，
     Robustness 分数取决于"剩余薄箱是否已按这个推断加固"，而不是只看有没有裂开。"""
     remaining_thin = evidence.get("thin_boxes_count", 0) - evidence.get("cracked_boxes_count", 0)
     reinforced = evidence.get("reinforced_boxes_count", 0)
