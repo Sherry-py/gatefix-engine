@@ -9,8 +9,8 @@ Coverage / Ordering / Robustness), and what residual external risk survives
 even after approval. This repo is a small, runnable engine (`gate.py` +
 `engine.py`, ~250 lines, one dependency) that encodes that decision rule and
 runs it end-to-end on a real case: an 8-commit, cross-border, remote
-lease-termination (Sydney, July 2026) with real dollar amounts and real
-third-party executors (names replaced with role labels, facts kept real).
+lease-termination in Sydney, with real dollar amounts and real third-party
+executors (names replaced with role labels, facts kept real).
 `python engine.py run --case=sydney_move` reproduces all 8 routing decisions
 deterministically — no LLM call needed, the decision logic itself is the
 point.
@@ -23,8 +23,8 @@ point.
 就能看到框架把这 8 个决策点分别判成"直接放行""自动补证据再判""必须叫人终审"
 "这事儿机器判不了、直接交给人"四种结果——全部对应真实发生过的事，不是编的。
 
-这不是一个抽象 demo。`evidence/sydney_move_evidence.yaml` 里的每一条都是 2026 年 7 月这次悉尼
-Rosebery 公寓远程退租真实发生过的事——包括 7 月新增的空运纸箱加固决策和关税不确定性。
+这不是一个抽象 demo。`evidence/sydney_move_evidence.yaml` 里的每一条都是这次悉尼
+Rosebery 公寓远程退租真实发生过的事——包括案例后期新增的空运纸箱加固决策和关税不确定性。
 代码跑的是真实数据，不是虚构 case。第三方（中介、楼管、货代等）的姓名已替换为身份角色标注，
 金额与事实细节保留真实。
 
@@ -110,7 +110,7 @@ route 结果跟本 README 里描述的完全一致。改了 `commits/sydney_move
 ├── preconditions/
 │   └── sydney_move.py                         # 7 个打分函数——本案例特有的 Pᵢ(E,θᵢ) 具体实现
 ├── evidence/
-│   └── sydney_move_evidence.yaml              # 真实案例证据（8 条，含 7 月新增的纸箱/关税事件）
+│   └── sydney_move_evidence.yaml              # 真实案例证据（8 条，含案例后期新增的纸箱/关税事件）
 ├── tests/
 │   └── test_engine.py                         # gate.py 公式单元测试 + sydney_move 端到端回归测试
 └── gate_record.jsonl                          # 运行后生成的判定记录（可重复生成，已提交一份跑过的样例）

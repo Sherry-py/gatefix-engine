@@ -1,5 +1,5 @@
 # commits/sydney_move_commits.yaml —— 悉尼远程退租案例（case=sydney_move）的 commit 点定义
-# 数据来源：私人案例笔记（未发表，非论文）第5节"Commit Gates"表 + 7月新增的空运纸箱事件
+# 数据来源：私人案例笔记（未发表，非论文）第5节"Commit Gates"表 + 案例后期新增的空运纸箱事件
 #
 # 每个 commit 定义：
 #   cost_reverse: 撤销这个动作的成本（inf = 完全不可逆）
