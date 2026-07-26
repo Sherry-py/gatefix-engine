@@ -22,7 +22,7 @@ sydney_move 这一个场景实际跑通过验证——"换场景不用改引擎"
 def score_discard_items(evidence: dict) -> dict:
     O = 1.0 if evidence.get("friend_selected_done") and evidence.get("organizer_selected_done") else 0.4
     C = 1.0 if evidence.get("id_documents_removed") and evidence.get("personal_info_papers_removed") else 0.3
-    R, Ro = 1.0, 1.0
+    R, Ro = 1.0, 1.0  # 本 case 无对应证据字段区分，待收紧
     return dict(
         R=R, C=C, O=O, Ro=Ro,
         verifiable_ext=True,
@@ -33,7 +33,7 @@ def score_discard_items(evidence: dict) -> dict:
 def score_physical_handover(evidence: dict) -> dict:
     C = 1.0 if evidence.get("payment_received") and evidence.get("buyer_identity_confirmed") else 0.3
     O = 1.0 if evidence.get("pickup_window_confirmed") and evidence.get("building_access_aligned_with_organizer") else 0.4
-    R, Ro = 1.0, 1.0
+    R, Ro = 1.0, 1.0  # 本 case 无对应证据字段区分，待收紧
     return dict(
         R=R, C=C, O=O, Ro=Ro,
         verifiable_ext=True,
