@@ -131,55 +131,24 @@ case 名动态加载这四处，不需要改 `engine.py` 里的任何一行。
 
 ## 和 benchmark 类工作（如 WorkBuddy Bench）的关系
 
-2026-07-24 腾讯 Youtu Lab 等团队发了 **WorkBuddy Bench**（arXiv:2607.20911v1），一个
-260 任务的多领域 coding-agent benchmark。这份 README 单独开一节写它，不是因为
-GateFix 和它是同类工作，而是因为把两者放在一起对比，能更精确地说清楚 GateFix
-到底在做什么、不在做什么。
+腾讯 Youtu Lab 等团队近期发布的 **WorkBuddy Bench**（arXiv:2607.20911v1）是一个
+260 任务的多领域 coding-agent benchmark。两者不是同类工作，对比一下能说清楚
+GateFix 在做什么：
 
-**准入自检（admission check）**——WorkBuddy Bench 收录一个任务之前，要求
-baseline_reward ≤ 0.3（不碰的原始环境不能已经满足任务）且 oracle_reward = 1.0
-（标准答案必须完全满足任务）：如果任务自己的判分标准分不清"没做"和"做完"，
-这个任务在进入 agent 之前就被扔掉。`preconditions/sydney_move.py` 里的打分函数
-面临同一类风险——一个不管证据好坏都打高分的 Pᵢ(E,θᵢ) 会让整个 gate 变成橡皮图章，
-看起来在把关，实际上什么都放行。`tests/test_admission_gate.py` 就是照这个思路
-新增的自检：对每个打分函数分别喂"baseline"（不完整/真实发生过的证据缺口）和
-"oracle"（补齐后的证据），断言 baseline 的 `route()` 不能是 PASS、oracle 的
-`route()` 必须是 PASS。这不是照搬 WorkBuddy 的 0.3/1.0 数值（GateFix 的路由是
-PASS/AUTO_REPAIR/ESCALATE 三态，不是 0-1 连续 reward），而是把"判分标准本身
-值不值得信任"这个自检习惯搬过来。写这份自检时也如实留了一个发现：
-`score_discard_items` 和 `score_physical_handover` 的 R、Ro 目前是写死的 1.0，
-不随证据变化——测试仍然通过（C、O 两维已经够把 baseline 拉到 PASS 以下），
-但这两个函数的"真的在判别证据"程度弱于其余四个，记在这里作为后续要收紧的点，
-没有为了让自检看起来更漂亮而回头改判分逻辑。
-
-**Q 和"事有多大"是正交设计，不是疏漏**——GateFix 的 4D-CQ 质量分 Q 只回答
-"这份证据本身够不够格"，完全不看这个 commit 涉及多少钱、可不可逆——那部分由
-`IsCommit`/`LoopMode`/`Risk_ext` 单独处理。所以 ¥50 的"扔弃物品"和 ¥17,100 的
-"空运纸箱交运"用的是同一条 τ_pass=0.85，这是有意为之：证据质量的判定标准不应该
-因为金额大就变严、金额小就放水，两件事分开算，才不会互相污染。
-
-**判的是"能不能现在放行"，不是"这个 agent 到底行不行"**——WorkBuddy Bench 回答
-的是事后问题：一整条任务跑完，拿隐藏的判分资产（测试/LLM Judge/Judge Agent）
-打分，衡量 agent 有没有能力独立完成整个任务。GateFix 回答的是当下问题：这一个
-具体动作，在它即将变得不可逆之前，现在能不能自动放行。两者是同一个生产级
-agent 系统里可以叠加的两层，不是同一件事的两种做法——一个在事后评估能力，
-一个在事中拦截风险，换掉其中一个不能替代另一个。
-
-**判分函数用确定性代码，不用 LLM Judge——是选择，不是没做完**——WorkBuddy
-Bench 的 Security 子集刻意用完全确定性的 `scoring.py`、不引入任何 LLM Judge，
-就是为了避开 Web/Office 子集自己承认存在、但没能量化的"模型评委偏差"风险。
-`preconditions/sydney_move.py` 里的 7 个打分函数同理：全部是确定性规则代码，
-不是 LLM 打分——这是面对不可逆/涉资金场景时的主动选择（判定过程本身必须可
-审计、可复现、不随模型改版漂移），不是"还没来得及接 LLM Judge"的过渡状态。
-
-**如实说明一个尚未验证的点**——WorkBuddy Bench 的核心贡献之一是跨模型排行榜
-（同一批任务在 Claude Opus 4.8 / GLM-5.2 / GPT-5.5 / HY-3 / Kimi K2.7 /
-MiniMax-M3 / DeepSeek-V4-Pro 等多个模型上分别跑分）。GateFix 从未做过这类
-跨模型稳定性测试——`preconditions/sydney_move.py` 里的打分函数是固定的启发式
-Python 代码，不会因为提出这个动作的是哪个模型而改变判断，这本身是设计上的
-优点（判定不依赖任何一个模型的行为），但也意味着"换一个模型来提议动作，
-gate 的判定会不会跟着漂移"这个问题目前完全没有实测数据支持。如果被问到，
-这是下一步该做、还没做的事，不是已经验证过的结论。
+- **准入自检**：WorkBuddy Bench 要求收录任务满足 baseline_reward ≤ 0.3、
+  oracle_reward = 1.0，确保判分标准本身能区分"没做"和"做完"。
+  `tests/test_admission_gate.py` 对 `preconditions/sydney_move.py` 里的打分函数
+  做了同类自检——分别喂 baseline（真实证据缺口）和 oracle（补齐后）的证据，
+  断言前者的 `route()` 不能是 PASS、后者必须是 PASS。
+- **Q 与风险大小正交**：4D-CQ 质量分只判断证据本身够不够格，不看金额或可逆性——
+  那部分由 `IsCommit`/`LoopMode`/`Risk_ext` 单独处理，同一条 τ_pass=0.85 同时
+  用于 ¥50 的"扔弃物品"和 ¥17,100 的"空运纸箱交运"。
+- **评估对象不同**：WorkBuddy Bench 是事后能力评估——任务跑完后打分，衡量
+  agent 能不能独立完成整个任务。GateFix 是事中风险拦截——判断某个具体动作
+  在变得不可逆之前能不能自动放行。二者可以在同一个生产系统里叠加，不是
+  互相替代的关系。
+- **确定性打分，而非 LLM Judge**：`preconditions/sydney_move.py` 的 7 个打分
+  函数全部是确定性规则代码，为的是让判定过程可审计、可复现、不随模型改版漂移。
 
 ## Case notes
 
