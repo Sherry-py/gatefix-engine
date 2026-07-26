@@ -57,7 +57,7 @@ GateFix 的核心主张是：agent 能不能自主执行一个动作，不该由
   （"钥匙移交中介"这一条——钥匙数量最初来源是"记忆"，Relevance 打低分，
   触发一轮 AUTO_REPAIR 后来源换成"中介邮件"，重新判定通过）。
 - **ESCALATE**：证据缺口不可外部核查，必须人工终审
-  （"Bond claim 确认"——RBO 退款账户户名是伴侣，不是委托人本人，
+  （"Bond claim 确认"——RBO 退款账户户名是第三方，不是委托人本人，
   这个不符只能靠人核实关系，engine.py 里 `verifiable_ext=False`，不会走 AUTO_REPAIR，
   直接升级给人）。
 - **BYPASS_TO_HUMAN**：证据是人情类、机器根本组装不了，不进入四维打分

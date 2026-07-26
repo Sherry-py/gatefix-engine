@@ -29,7 +29,7 @@ key_to_agent:
 bond_claim_confirm:
   deductions: ["cleaning_fee", "break_fee_1100"]
   approved_deductions: ["cleaning_fee", "break_fee_1100"]
-  refund_account_name: "伴侣（Partner）"    # 真实情况：退款账户是伴侣的
+  refund_account_name: "第三方（Third party）"    # 真实情况：退款账户户名并非委托人本人
   client_name: "委托人本人（Client）"        # 委托人本人——两者不一致，这是真实的 RBO 案例
   refund_account_still_active: true
 
