@@ -132,7 +132,7 @@ def test_bond_claim_real_mismatched_account_escalates():
     baseline = {
         "deductions": ["cleaning_fee", "break_fee_1100"],
         "approved_deductions": ["cleaning_fee", "break_fee_1100"],
-        "refund_account_name": "Partner", "client_name": "Client",
+        "refund_account_name": "Third party", "client_name": "Client",
         "refund_account_still_active": True,
     }
     assert route_for(p.score_bond_claim(baseline)) == "ESCALATE"
