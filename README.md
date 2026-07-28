@@ -92,6 +92,39 @@ route 结果跟本 README 里描述的完全一致。改了 `commits/sydney_move
 回归测试验证的是"sydney_move 这一个场景的判定结果没被意外改坏"——不是"多场景都能跑"，
 后者目前没有测试覆盖，因为目前也只有一个场景。
 
+## Agent loop 里的 pre-action authorization
+
+上面跑的是"一次性判一个 case"。`agent/gated_loop.py` 把同一套 gate 判定嵌进一个
+显式的 reason → gate → act 循环，演示"每一步动作执行前先授权"这个更贴近真实
+agent 部署形态的用法——**复用的是同一个 `gate.py`/`preconditions/sydney_move.py`，
+不是另一套判定逻辑**。
+
+```bash
+python agent/gated_loop.py --case=sydney_move
+```
+
+这条命令会按 `commits/sydney_move_commits.yaml` 里的真实顺序，逐个把 8 个
+commit 当作待授权的动作喂给真实 gate：前 4 个（`discard_items` /
+`physical_handover` / `key_to_building_manager` / `key_to_agent`）真实判定为
+PASS（`key_to_agent` 内部真实走了一轮 AUTO_REPAIR 才收敛到 PASS），第 5 个
+`bond_claim_confirm` 真实判定为 ESCALATE，循环在这里安全停下——**`tool_fn`
+对这一步完全没有被调用**，这是这个模块唯一不可放宽的契约。
+
+几点如实说明：
+
+- **没有新的判定逻辑**：`agent/gated_loop.py` 里的 `make_case_gate_fn` 是
+  `engine.py::run_case` 那套三态路由 + AUTO_REPAIR 重试循环的原样复刻，读的
+  是同一份 `commits/bindings/evidence/preconditions` 配置。
+- **仍然是 LLM-free**：`tool_fn` 不调用任何真实模型/工具 API——这个仓库设计上
+  没有这样的组件（见开头 TL;DR）。它记录的 cost 是抽象 action-cost 单位，不是
+  LLM token；本仓库测不了 token 成本，就不写"token 成本"这个说法。
+- **`reason_fn` 是最小实现，不是 planner**：本仓库没有真正的推理/规划步骤，
+  `make_case_reason_fn` 只是按 commits.yaml 声明的顺序逐个产出下一个待授权动作。
+- 单元测试见 `tests/test_gated_loop.py`：一部分用手写的假 gate_fn/tool_fn 测
+  循环本身的控制流（非 PASS 必须阻断 `tool_fn`），另一部分直接用
+  `make_case_gate_fn("sydney_move")` 跑真实 case 数据，断言上面这条真实轨迹
+  （AUTO_REPAIR 收敛、ESCALATE 阻断、`tool_fn` 未被调用）。
+
 ## 文件结构
 
 ```
@@ -103,6 +136,9 @@ route 结果跟本 README 里描述的完全一致。改了 `commits/sydney_move
 │                                              # expectation_gate / expected_external_risk 六个公式的代码实现
 ├── engine.py                                 # CLI 运行时：按 --case 动态加载下面四处配置→
 │                                              # 打分→三态路由→(AUTO_REPAIR循环)→写回
+├── agent/
+│   └── gated_loop.py                         # reason→gate→act 循环：把 gate.py 嵌进 per-action
+│                                              # pre-action authorization，复用真实 gate，不含新判定逻辑
 ├── commits/
 │   └── sydney_move_commits.yaml               # 8 个 commit 点定义（可逆性/涉及金额/打分函数名/风险配置）
 ├── bindings/
@@ -113,7 +149,8 @@ route 结果跟本 README 里描述的完全一致。改了 `commits/sydney_move
 │   └── sydney_move_evidence.yaml              # 真实案例证据（8 条，含案例后期新增的纸箱/关税事件）
 ├── tests/
 │   ├── test_engine.py                         # gate.py 公式单元测试 + sydney_move 端到端回归测试
-│   └── test_admission_gate.py                 # precondition 打分函数的准入自检（见下方"和 benchmark 类工作的关系"）
+│   ├── test_admission_gate.py                 # precondition 打分函数的准入自检（见下方"和 benchmark 类工作的关系"）
+│   └── test_gated_loop.py                     # agent loop 控制流单测 + 真实 sydney_move 数据的端到端断言
 └── gate_record.jsonl                          # 运行后生成的判定记录（可重复生成，已提交一份跑过的样例）
 ```
 

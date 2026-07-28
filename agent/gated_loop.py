@@ -1,0 +1,337 @@
+"""
+agent/gated_loop.py —— 把 gate.py 的三态路由嵌进一个 agent loop：每一步
+reason → gate → (只有 PASS 才) act，非 PASS 结果绝不放行 tool_fn。
+
+这个模块复用 gate.py 的 GateConfig（真实的 4D-CQ 判定公式）以及
+preconditions/<case>.py 里已有的 REGISTRY / REPAIR_REGISTRY（真实的打分
+与补证函数）——不引入任何新的判定逻辑。也不引入任何真实模型/LLM 调用：
+本仓库设计上是 LLM-free 的确定性 demo（见 README「no LLM call needed」），
+这条不变。tool_fn 的返回值里那个整数是抽象的 action-cost 单位，不是
+LLM token 计数——这个仓库测不了 token 成本，就不假装测了。
+
+Route → 二元映射（不新增 REFUSE verdict，复用 gate.py 真实的 route 词汇表）：
+    PASS                        → 放行，tool_fn 执行
+    ESCALATE / BYPASS_TO_HUMAN  → 阻断，tool_fn 绝不执行
+    AUTO_REPAIR                 → 不对外暴露。engine.py 证明这是"补证据后
+                                  重新判定"的真实重试循环（见 run_case 里
+                                  的 while True + REPAIR_REGISTRY + k_dry），
+                                  所以 make_case_gate_fn 在适配层内部原样
+                                  复刻这个重试循环，直到收敛成 PASS /
+                                  ESCALATE 再返回——GatedAgentLoop 本身永远
+                                  只看到"放行 / 阻断"两态，和 engine.py 的
+                                  行为完全一致。
+
+没有 CLARIFY 这一态，也没有"非 PASS 但仍放行"的旁路开关：真实 gate.py 的
+route() 只产出 PASS / AUTO_REPAIR / ESCALATE，engine.py 另外加了
+BYPASS_TO_HUMAN（人情类证据，不进入四维打分）。凡是收敛结果不是 PASS，
+tool_fn 就不会被调用——这是这个模块唯一的契约，不可配置、不可放宽。
+"""
+
+from __future__ import annotations
+
+import importlib
+import sys
+import time
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Callable, Optional
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))
+
+from gate import GateConfig  # noqa: E402
+from engine import load_yaml  # noqa: E402
+
+
+@dataclass
+class GateResult:
+    """一次 gate 判定的最终结果。route 只会是 PASS / ESCALATE /
+    BYPASS_TO_HUMAN 之一——AUTO_REPAIR 已经在 make_case_gate_fn 内部收敛掉，
+    不会出现在这里（和 engine.py 写进 gate_record.jsonl 的最终 route 一致）。
+    """
+
+    route: str
+    R: float
+    C: float
+    O: float
+    Ro: float
+    Q: float
+    verifiable_ext: bool = True
+    dry_rounds: int = 0
+    repair_attempts: int = 0
+    reason: str = ""
+
+    @property
+    def blocked(self) -> bool:
+        return self.route != "PASS"
+
+
+@dataclass
+class StepTelemetry:
+    step: int
+    tool: str
+    route: str
+    gate_latency_ms: float
+    gate_tokens: int  # 抽象 action-cost 单位（见模块 docstring），不是 LLM token
+    action_latency_ms: float = 0.0
+    action_tokens: int = 0  # 同上，来自 tool_fn 的抽象 cost
+    blocked: bool = False
+
+    @property
+    def total_latency_ms(self) -> float:
+        return self.gate_latency_ms + self.action_latency_ms
+
+    @property
+    def total_tokens(self) -> int:
+        return self.gate_tokens + self.action_tokens
+
+
+@dataclass
+class LoopTrace:
+    steps: list = field(default_factory=list)
+    final_output: Optional[str] = None
+    halted_by_gate: bool = False
+
+    def total_tokens(self) -> int:
+        return sum(s.total_tokens for s in self.steps)
+
+    def total_latency_ms(self) -> float:
+        return sum(s.total_latency_ms for s in self.steps)
+
+    def gate_overhead_ratio(self) -> float:
+        total = self.total_latency_ms()
+        if total == 0:
+            return 0.0
+        return sum(s.gate_latency_ms for s in self.steps) / total
+
+
+GateFn = Callable[[str, dict], GateResult]
+ToolFn = Callable[[dict], "tuple[str, int]"]
+ReasonFn = Callable[[dict], "tuple[dict, int]"]
+
+
+class GatedAgentLoop:
+    """核心契约：gate_fn 每步只返回 PASS 或阻断（ESCALATE/BYPASS_TO_HUMAN
+    已在适配层收敛为非 PASS）；非 PASS 时 tool_fn 绝不被调用。没有开关能
+    关掉这条——这是这个类存在的全部意义。"""
+
+    def __init__(self, gate_fn: GateFn, tool_fn: ToolFn, reason_fn: ReasonFn,
+                 max_steps: int = 6):
+        self.gate_fn = gate_fn
+        self.tool_fn = tool_fn
+        self.reason_fn = reason_fn
+        self.max_steps = max_steps
+
+    def run(self, context: str, initial_state: dict) -> LoopTrace:
+        trace = LoopTrace()
+        state = dict(initial_state)
+        for step in range(1, self.max_steps + 1):
+            action, _reason_tokens = self.reason_fn(state)
+            if action.get("type") == "finish":
+                trace.final_output = action.get("output")
+                return trace
+
+            tool_name = action.get("tool", "unknown")
+            t0 = time.perf_counter()
+            gate = self.gate_fn(context, action)
+            gate_ms = (time.perf_counter() - t0) * 1000
+            gate_cost = _gate_cost_estimate(gate)
+
+            tel = StepTelemetry(step=step, tool=tool_name, route=gate.route,
+                                 gate_latency_ms=gate_ms, gate_tokens=gate_cost)
+
+            if gate.blocked:
+                tel.blocked = True
+                trace.steps.append(tel)
+                trace.halted_by_gate = True
+                trace.final_output = (
+                    f"BLOCKED[{gate.route}]: {gate.reason or 'gate did not authorize this action'}"
+                )
+                return trace
+
+            t1 = time.perf_counter()
+            output, action_cost = self.tool_fn(action)
+            tel.action_latency_ms = (time.perf_counter() - t1) * 1000
+            tel.action_tokens = action_cost
+            trace.steps.append(tel)
+            state = _advance_state(state, action, output)
+
+        trace.final_output = state.get("last_output")
+        return trace
+
+
+def _gate_cost_estimate(gate: GateResult) -> int:
+    """抽象 action-cost：这个仓库的 gate 是确定性 Python 计算（quality_score
+    对 R/C/O/Ro 四个维度加权求和），不调用任何计费 API，没有真实"token"
+    概念。这里按"评估了 4 个维度"计 4 个抽象 cost 单位——描述的是计算量的
+    形状，不是编造出来的 LLM 用量数字。"""
+    return 4
+
+
+def _advance_state(state: dict, action: dict, output: str) -> dict:
+    new = dict(state)
+    new["last_output"] = output
+    new.setdefault("history", []).append({"action": action, "output": output})
+    return new
+
+
+# ---------------------------------------------------------------------------
+# 真实接线：把上面的 GateFn / ReasonFn / ToolFn 接到 sydney_move 这个真实
+# case 的数据和代码上——不是占位，是 engine.py 同一套 commits/bindings/
+# evidence/preconditions 四处配置的复用。
+# ---------------------------------------------------------------------------
+
+
+def make_case_gate_fn(case: str) -> GateFn:
+    """真正接到 preconditions/<case>.py 的 REGISTRY/REPAIR_REGISTRY 和
+    evidence/<case>_evidence.yaml、commits/<case>_commits.yaml 上的
+    gate_fn 工厂。忠实复刻 engine.py::run_case 里的三条分支（bypass_to_human /
+    soft_commit / 常规三态路由 + AUTO_REPAIR 重试循环），只是把结果收敛成
+    单次调用返回的 GateResult，供 GatedAgentLoop 使用。"""
+    config = GateConfig()
+    precondition_module = importlib.import_module(f"preconditions.{case}")
+    registry = precondition_module.REGISTRY
+    repair_registry = getattr(precondition_module, "REPAIR_REGISTRY", {})
+
+    commits_path = BASE_DIR / "commits" / f"{case}_commits.yaml"
+    evidence_path = BASE_DIR / "evidence" / f"{case}_evidence.yaml"
+    commits_by_id = {c["id"]: c for c in load_yaml(commits_path)["commits"]}
+    all_evidence = load_yaml(evidence_path)
+
+    def gate_fn(context: str, action: dict) -> GateResult:
+        commit_id = action["commit_id"]
+        commit = commits_by_id[commit_id]
+
+        # ---- 分支 1：人情类，直接旁路给人（engine.py 分支 1 的等价物） ----
+        if commit.get("bypass_to_human"):
+            return GateResult(
+                route="BYPASS_TO_HUMAN", R=0, C=0, O=0, Ro=0, Q=0,
+                verifiable_ext=False,
+                reason=commit.get("bypass_reason", ""),
+            )
+
+        score_fn = registry[commit["precondition_fn"]]
+        evidence = dict(all_evidence.get(commit_id, {}))
+
+        # ---- 分支 2：软 commit，走 expectation_gate（engine.py 分支 2） ----
+        if commit.get("soft_commit"):
+            result = score_fn(evidence)
+            allowed = config.expectation_gate(
+                result.get("contains_promise", True),
+                result.get("has_feasibility_evidence", False),
+            )
+            return GateResult(
+                route="PASS" if allowed else "ESCALATE",
+                R=result["R"], C=result["C"], O=result["O"], Ro=result["Ro"],
+                Q=config.quality_score(result["R"], result["C"], result["O"], result["Ro"]),
+                verifiable_ext=result["verifiable_ext"],
+                reason=result.get("notes", ""),
+            )
+
+        # ---- 分支 3：常规 commit，三态路由 + AUTO_REPAIR 重试循环 ----
+        # 这段是 engine.py::run_case 那个 while True 循环的原样复刻——
+        # 同一个 REPAIR_REGISTRY，同一个 k_dry 耗尽判定。AUTO_REPAIR 只在
+        # 这个循环内部出现，函数最终只会 return PASS 或 ESCALATE。
+        repair_fn = repair_registry.get(commit["precondition_fn"])
+        dry_rounds = 0
+        repair_attempts = 0
+        while True:
+            result = score_fn(evidence)
+            Q = config.quality_score(result["R"], result["C"], result["O"], result["Ro"])
+            route = config.route(Q, result["verifiable_ext"], dry_rounds)
+
+            if route == "AUTO_REPAIR" and repair_fn is not None:
+                repair_attempts += 1
+                new_evidence = repair_fn(evidence)
+                if new_evidence == evidence:
+                    dry_rounds += 1
+                else:
+                    evidence = new_evidence
+                    dry_rounds = 0
+                if dry_rounds >= config.k_dry:
+                    route = "ESCALATE"
+                    break
+                continue
+            break
+
+        return GateResult(
+            route=route, R=result["R"], C=result["C"], O=result["O"], Ro=result["Ro"], Q=Q,
+            verifiable_ext=result["verifiable_ext"], dry_rounds=dry_rounds,
+            repair_attempts=repair_attempts, reason=result.get("notes", ""),
+        )
+
+    return gate_fn
+
+
+def make_case_reason_fn(case: str) -> ReasonFn:
+    """最小实现，且如实注明：这不是一个真正的 planner / LLM 推理步骤——本
+    仓库里没有这样的组件（README 写明这是 LLM-free 的确定性 demo）。这里
+    只是按 commits/<case>_commits.yaml 里声明的顺序，一次产出一个真实
+    commit 作为下一步待授权的动作，直到 8 个 commit 都被处理过（或被 gate
+    拦下、循环提前结束）为止。"""
+    commits_path = BASE_DIR / "commits" / f"{case}_commits.yaml"
+    ordered_ids = [c["id"] for c in load_yaml(commits_path)["commits"]]
+
+    def reason_fn(state: dict):
+        processed = {h["action"].get("commit_id") for h in state.get("history", [])}
+        remaining = [cid for cid in ordered_ids if cid not in processed]
+        if not remaining:
+            return {"type": "finish", "output": "all commits processed"}, 0
+        next_id = remaining[0]
+        return {"type": "tool", "tool": next_id, "commit_id": next_id}, 0
+
+    return reason_fn
+
+
+def make_case_tool_fn() -> ToolFn:
+    """最小实现，且如实注明：这个 demo 没有真实的外部副作用可执行（不连
+    myUNSW/银行/物流之类的真实系统——见 CLAUDE.md 的"Oracles, not live
+    systems"）。tool_fn 能做的真实事情就是记录"这个 commit 已放行执行"，
+    cost 是每次调用固定 1 个抽象单位，不是编造出来冒充 token 的数字。"""
+
+    def tool_fn(action: dict):
+        return f"executed {action['commit_id']}", 1
+
+    return tool_fn
+
+
+def _print_trace(case: str, trace: LoopTrace) -> None:
+    print("=" * 78)
+    print(f"agent/gated_loop.py —— pre-action authorization demo, case: {case}")
+    print("=" * 78)
+    for s in trace.steps:
+        status = "BLOCKED" if s.blocked else "OK"
+        print(f"  step {s.step}: tool={s.tool!r} route={s.route} [{status}] "
+              f"gate_latency={s.gate_latency_ms:.3f}ms action_latency={s.action_latency_ms:.3f}ms "
+              f"cost={s.total_tokens}")
+    print(f"\n  halted_by_gate={trace.halted_by_gate}")
+    print(f"  final_output={trace.final_output!r}")
+    print(f"  total steps={len(trace.steps)}  total cost={trace.total_tokens()}  "
+          f"total latency={trace.total_latency_ms():.3f}ms  "
+          f"gate_overhead_ratio={trace.gate_overhead_ratio():.3f}")
+    print("=" * 78)
+
+
+def main():
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="Run the gated agent loop against a real GateFix case")
+    parser.add_argument("--case", default="sydney_move",
+                         help="case 名（复用 commits/bindings/evidence/preconditions 四处真实配置）")
+    parser.add_argument("--max-steps", type=int, default=8)
+    args = parser.parse_args()
+
+    loop = GatedAgentLoop(
+        gate_fn=make_case_gate_fn(args.case),
+        tool_fn=make_case_tool_fn(),
+        reason_fn=make_case_reason_fn(args.case),
+        max_steps=args.max_steps,
+    )
+    trace = loop.run(context=args.case, initial_state={})
+    _print_trace(args.case, trace)
+
+
+if __name__ == "__main__":
+    main()
