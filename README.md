@@ -134,7 +134,9 @@ MCP server 判的是**调用方每次传入的活证据**——是一个真的�
 动作前面的 gate，不是案例回放。
 
 ```bash
-pip install mcp   # 只有跑 MCP server 才需要，核心仓库仍然只依赖 pyyaml
+pip install "mcp==1.23.1"   # 只有跑 MCP server 才需要，核心仓库仍然只依赖 pyyaml
+                            # 钉死版本：mcp 2.0.0 重组了包结构，去掉/挪动了
+                            # mcp.server.fastmcp，不钉版本会导致 CI 装到不兼容的版本
 python mcp_server/server.py   # stdio transport，接入任何 MCP client 的方式和其他 MCP server 一样
 ```
 
