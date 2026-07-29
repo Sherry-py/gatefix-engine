@@ -212,56 +212,79 @@ def make_case_gate_fn(case: str) -> GateFn:
             )
 
         score_fn = registry[commit["precondition_fn"]]
+        repair_fn = repair_registry.get(commit["precondition_fn"])
         evidence = dict(all_evidence.get(commit_id, {}))
 
-        # ---- 分支 2：软 commit，走 expectation_gate（engine.py 分支 2） ----
-        if commit.get("soft_commit"):
-            result = score_fn(evidence)
-            allowed = config.expectation_gate(
-                result.get("contains_promise", True),
-                result.get("has_feasibility_evidence", False),
-            )
-            return GateResult(
-                route="PASS" if allowed else "ESCALATE",
-                R=result["R"], C=result["C"], O=result["O"], Ro=result["Ro"],
-                Q=config.quality_score(result["R"], result["C"], result["O"], result["Ro"]),
-                verifiable_ext=result["verifiable_ext"],
-                reason=result.get("notes", ""),
-            )
-
-        # ---- 分支 3：常规 commit，三态路由 + AUTO_REPAIR 重试循环 ----
-        # 这段是 engine.py::run_case 那个 while True 循环的原样复刻——
-        # 同一个 REPAIR_REGISTRY，同一个 k_dry 耗尽判定。AUTO_REPAIR 只在
-        # 这个循环内部出现，函数最终只会 return PASS 或 ESCALATE。
-        repair_fn = repair_registry.get(commit["precondition_fn"])
-        dry_rounds = 0
-        repair_attempts = 0
-        while True:
-            result = score_fn(evidence)
-            Q = config.quality_score(result["R"], result["C"], result["O"], result["Ro"])
-            route = config.route(Q, result["verifiable_ext"], dry_rounds)
-
-            if route == "AUTO_REPAIR" and repair_fn is not None:
-                repair_attempts += 1
-                new_evidence = repair_fn(evidence)
-                if new_evidence == evidence:
-                    dry_rounds += 1
-                else:
-                    evidence = new_evidence
-                    dry_rounds = 0
-                if dry_rounds >= config.k_dry:
-                    route = "ESCALATE"
-                    break
-                continue
-            break
-
-        return GateResult(
-            route=route, R=result["R"], C=result["C"], O=result["O"], Ro=result["Ro"], Q=Q,
-            verifiable_ext=result["verifiable_ext"], dry_rounds=dry_rounds,
-            repair_attempts=repair_attempts, reason=result.get("notes", ""),
+        return resolve_precondition(
+            config, score_fn, evidence,
+            repair_fn=repair_fn,
+            soft_commit=bool(commit.get("soft_commit")),
         )
 
     return gate_fn
+
+
+def resolve_precondition(
+    config: GateConfig,
+    score_fn: Callable[[dict], dict],
+    evidence: dict,
+    *,
+    repair_fn: Optional[Callable[[dict], dict]] = None,
+    soft_commit: bool = False,
+) -> GateResult:
+    """给定一个真实的打分函数 + 一份证据，解出最终 GateResult。这是
+    engine.py::run_case 里"软 commit 走 expectation_gate / 常规 commit 走
+    三态路由 + AUTO_REPAIR 重试循环"这两条分支的原样复刻，抽成独立函数是
+    因为它现在有两个真实调用方：make_case_gate_fn（case+commit_id，读静态
+    evidence yaml）和 mcp_server/server.py（precondition_fn+外部传入的活
+    evidence，供任意 MCP client 调用）——两者必须走同一份判定逻辑，不能
+    各写一份、慢慢长歪。
+
+    soft_commit 分支：不看 R/C/O/Ro 阈值，改看 contains_promise /
+    has_feasibility_evidence 这两个布尔量（expectation_gate）。
+    常规分支：AUTO_REPAIR 只在这个函数内部出现，循环收敛后只会返回
+    PASS 或 ESCALATE——调用方永远只看到二态结果。"""
+    if soft_commit:
+        result = score_fn(evidence)
+        allowed = config.expectation_gate(
+            result.get("contains_promise", True),
+            result.get("has_feasibility_evidence", False),
+        )
+        return GateResult(
+            route="PASS" if allowed else "ESCALATE",
+            R=result["R"], C=result["C"], O=result["O"], Ro=result["Ro"],
+            Q=config.quality_score(result["R"], result["C"], result["O"], result["Ro"]),
+            verifiable_ext=result["verifiable_ext"],
+            reason=result.get("notes", ""),
+        )
+
+    ev = dict(evidence)
+    dry_rounds = 0
+    repair_attempts = 0
+    while True:
+        result = score_fn(ev)
+        Q = config.quality_score(result["R"], result["C"], result["O"], result["Ro"])
+        route = config.route(Q, result["verifiable_ext"], dry_rounds)
+
+        if route == "AUTO_REPAIR" and repair_fn is not None:
+            repair_attempts += 1
+            new_evidence = repair_fn(ev)
+            if new_evidence == ev:
+                dry_rounds += 1
+            else:
+                ev = new_evidence
+                dry_rounds = 0
+            if dry_rounds >= config.k_dry:
+                route = "ESCALATE"
+                break
+            continue
+        break
+
+    return GateResult(
+        route=route, R=result["R"], C=result["C"], O=result["O"], Ro=result["Ro"], Q=Q,
+        verifiable_ext=result["verifiable_ext"], dry_rounds=dry_rounds,
+        repair_attempts=repair_attempts, reason=result.get("notes", ""),
+    )
 
 
 def make_case_reason_fn(case: str) -> ReasonFn:

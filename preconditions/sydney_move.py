@@ -20,6 +20,9 @@ sydney_move 这一个场景实际跑通过验证——"换场景不用改引擎"
 
 
 def score_discard_items(evidence: dict) -> dict:
+    """扔弃物品。evidence 字段：friend_selected_done、organizer_selected_done
+    （朋友/整理师是否都已挑完，决定 Ordering）；id_documents_removed、
+    personal_info_papers_removed（证件/含个人信息纸张是否已排除，决定 Coverage）。"""
     O = 1.0 if evidence.get("friend_selected_done") and evidence.get("organizer_selected_done") else 0.4
     C = 1.0 if evidence.get("id_documents_removed") and evidence.get("personal_info_papers_removed") else 0.3
     R, Ro = 1.0, 1.0  # 本 case 无对应证据字段区分，待收紧
@@ -31,6 +34,10 @@ def score_discard_items(evidence: dict) -> dict:
 
 
 def score_physical_handover(evidence: dict) -> dict:
+    """实物交割（家电出门）。evidence 字段：payment_received、
+    buyer_identity_confirmed（款项/身份是否确认，决定 Coverage）；
+    pickup_window_confirmed、building_access_aligned_with_organizer
+    （取件时间窗/楼宇进出安排是否对齐，决定 Ordering）。"""
     C = 1.0 if evidence.get("payment_received") and evidence.get("buyer_identity_confirmed") else 0.3
     O = 1.0 if evidence.get("pickup_window_confirmed") and evidence.get("building_access_aligned_with_organizer") else 0.4
     R, Ro = 1.0, 1.0  # 本 case 无对应证据字段区分，待收紧
@@ -42,6 +49,9 @@ def score_physical_handover(evidence: dict) -> dict:
 
 
 def score_key_to_building_manager(evidence: dict) -> dict:
+    """钥匙移交楼管。evidence 字段：agent_written_consent（中介是否书面
+    同意这个安排，决定 Relevance）；consent_source（同意的来源，仅用于
+    notes 里的说明文字，不参与打分）。"""
     R = 1.0 if evidence.get("agent_written_consent") else 0.2
     C = O = Ro = 1.0
     return dict(
