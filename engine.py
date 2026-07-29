@@ -27,6 +27,61 @@ from gate import GateConfig, GateRecord
 BASE_DIR = Path(__file__).parent
 
 
+def _resolve_regular_commit(config, score_fn, repair_fn, evidence, verbose=False):
+    """常规 commit 的三态路由 + AUTO_REPAIR 重试循环。从 run_case 里抽成独立
+    函数，一是让这段逻辑能在没有一整个 case 的 commits/evidence/preconditions
+    三份 yaml/py 文件的情况下被单测覆盖（构造一整个 case 只为测一个边界分支，
+    和"目前只有 sydney_move 一个真实场景"这条如实说明相冲突）；二是修一个真实
+    发现的缺口：route=="AUTO_REPAIR" 但这个 precondition_fn 没有在
+    REPAIR_REGISTRY 里注册补证函数时，原来的写法会让 AUTO_REPAIR 原样返回、
+    从不收敛——这不是一个合法终态（route 只能是 PASS 或 ESCALATE），
+    recorded sydney_move case 里凑巧没有任何这样的 commit 撞上这条路径，
+    所以一直没暴露；用真实但非案例内的 evidence 测试 MCP server 的
+    authorize() 时才发现。
+
+    返回 (route, result, Q, dry_rounds, repair_attempts)。route 只会是
+    PASS 或 ESCALATE 之一。"""
+    dry_rounds = 0
+    repair_attempts = 0
+    while True:
+        result = score_fn(evidence)
+        Q = config.quality_score(result["R"], result["C"], result["O"], result["Ro"])
+        route = config.route(Q, result["verifiable_ext"], dry_rounds)
+
+        if verbose or route != "AUTO_REPAIR":
+            print(f"  R={result['R']:.2f} C={result['C']:.2f} O={result['O']:.2f} "
+                  f"Ro={result['Ro']:.2f} → Q={Q:.3f}  route={route}  "
+                  f"(dry_rounds={dry_rounds})")
+            print(f"  说明: {result['notes']}")
+
+        if route == "AUTO_REPAIR" and repair_fn is not None:
+            repair_attempts += 1
+            print(f"  [AUTO_REPAIR] 缺口可外部验证，尝试补证（第 {repair_attempts} 轮）...")
+            new_evidence = repair_fn(evidence)
+            if new_evidence == evidence:
+                dry_rounds += 1  # 没有新证据
+            else:
+                evidence = new_evidence
+                dry_rounds = 0  # 拿到新证据，重置计数
+            if dry_rounds >= config.k_dry:
+                route = "ESCALATE"
+                print(f"  连续 {config.k_dry} 轮无新证据 → 强制 ESCALATE")
+                break
+            continue
+
+        if route == "AUTO_REPAIR":
+            # repair_fn 是 None：这个精度分数落进了"可以自动修"的区间，但这个
+            # precondition_fn 没有注册对应的补证函数，没有自动化手段真的去
+            # 补——不能停留在 AUTO_REPAIR 这个非终态，降级为 ESCALATE
+            # （和 k_dry 耗尽时的处理方式一致）。
+            route = "ESCALATE"
+            print("  这个 precondition_fn 没有注册 REPAIR_REGISTRY 补证函数，"
+                  "AUTO_REPAIR 无法自动执行 → 降级 ESCALATE")
+        break
+
+    return route, result, Q, dry_rounds, repair_attempts
+
+
 def load_yaml(path: Path) -> dict:
     with open(path, "r", encoding="utf-8") as f:
         return yaml.safe_load(f)
@@ -124,36 +179,10 @@ def run_case(case: str, verbose: bool = False):
         # ---------- 分支 3：常规 commit，走三态路由（可能带 AUTO_REPAIR 循环） ----------
         score_fn = REGISTRY[commit["precondition_fn"]]
         repair_fn = REPAIR_REGISTRY.get(commit["precondition_fn"])
-        dry_rounds = 0
-        repair_attempts = 0
-        route = None
 
-        while True:
-            result = score_fn(evidence)
-            Q = config.quality_score(result["R"], result["C"], result["O"], result["Ro"])
-            route = config.route(Q, result["verifiable_ext"], dry_rounds)
-
-            if verbose or route != "AUTO_REPAIR":
-                print(f"  R={result['R']:.2f} C={result['C']:.2f} O={result['O']:.2f} "
-                      f"Ro={result['Ro']:.2f} → Q={Q:.3f}  route={route}  "
-                      f"(dry_rounds={dry_rounds})")
-                print(f"  说明: {result['notes']}")
-
-            if route == "AUTO_REPAIR" and repair_fn is not None:
-                repair_attempts += 1
-                print(f"  [AUTO_REPAIR] 缺口可外部验证，尝试补证（第 {repair_attempts} 轮）...")
-                new_evidence = repair_fn(evidence)
-                if new_evidence == evidence:
-                    dry_rounds += 1  # 没有新证据
-                else:
-                    evidence = new_evidence
-                    dry_rounds = 0  # 拿到新证据，重置计数
-                if dry_rounds >= config.k_dry:
-                    route = "ESCALATE"
-                    print(f"  连续 {config.k_dry} 轮无新证据 → 强制 ESCALATE")
-                    break
-                continue
-            break
+        route, result, Q, dry_rounds, repair_attempts = _resolve_regular_commit(
+            config, score_fn, repair_fn, evidence, verbose=verbose,
+        )
 
         rec = GateRecord(
             commit_id=cid, commit_name=name,
