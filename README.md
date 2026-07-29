@@ -125,6 +125,50 @@ PASS（`key_to_agent` 内部真实走了一轮 AUTO_REPAIR 才收敛到 PASS）�
   `make_case_gate_fn("sydney_move")` 跑真实 case 数据，断言上面这条真实轨迹
   （AUTO_REPAIR 收敛、ESCALATE 阻断、`tool_fn` 未被调用）。
 
+## 把 gate 包成 MCP server
+
+`mcp_server/server.py` 把同一个 gate 暴露成两个 MCP tool，供任何 MCP client
+（Claude Desktop、其他 agent 框架……）调用。和上面 `agent/gated_loop.py` 的
+区别很关键：`make_case_gate_fn` 判的是**预录的** sydney_move 案例证据；这个
+MCP server 判的是**调用方每次传入的活证据**——是一个真的能挡在别的 agent
+动作前面的 gate，不是案例回放。
+
+```bash
+pip install mcp   # 只有跑 MCP server 才需要，核心仓库仍然只依赖 pyyaml
+python mcp_server/server.py   # stdio transport，接入任何 MCP client 的方式和其他 MCP server 一样
+```
+
+两个 tool：
+
+- **`list_precondition_functions(case="sydney_move")`**：列出这个 case 里
+  7 个可判定的 `precondition_fn`，附带对应 commit 名、是否 soft_commit、
+  有没有 AUTO_REPAIR、以及打分函数的 docstring（说明期望的 evidence 字段）。
+  调 `authorize()` 之前应该先调这个。
+- **`authorize(case, precondition_fn, evidence)`**：对传入的 `evidence`
+  做真实判定，返回 `route`（`PASS`/`ESCALATE`/`BYPASS_TO_HUMAN`，`AUTO_REPAIR`
+  已在内部收敛）、`authorized`（`route == "PASS"` 的布尔值）、`R/C/O/Ro/Q`、
+  `verifiable_ext`、`repair_attempts`、`reason`。`route != "PASS"` 时调用方
+  绝不能把动作当作已授权——和 `GatedAgentLoop` 的契约完全一样。
+
+如实说明这个东西的边界：
+
+- **只认得 sydney_move 这 7 个打分函数期望的 evidence 形状**，不是一个能判断
+  任意领域动作的通用 gate——传别的字段进去，打分函数只会按它认识的字段算，
+  不认识的字段会被忽略，不会报错提醒你传错了。
+- **`friend_compensation` 这类 `bypass_to_human` 的 commit 没有
+  `precondition_fn`**，不会出现在 `list_precondition_functions` 里，也没法
+  通过 `authorize()` 判定——这是有意的：人情类证据本来就该直接交给人，不该
+  假装能被 evidence-based gate 自动判定。
+- **判定逻辑和 CLI/agent loop 是同一份代码**：`mcp_server/server.py` 调用的
+  是 `agent/gated_loop.py` 里的 `resolve_precondition()`（三态路由 +
+  AUTO_REPAIR 重试循环 + soft_commit 分支的共享实现，`make_case_gate_fn` 也
+  调它），不是另外写的一套判定。
+- **仍然 LLM-free**：这个 server 不调用任何模型/外部 API。
+- 测试见 `tests/test_mcp_server.py`：`@mcp.tool()` 装饰器不改变函数本身
+  （直接调用 `authorize(...)` 即可，不需要起 MCP 协议/transport），断言覆盖
+  真实 AUTO_REPAIR 收敛、真实 ESCALATE、soft_commit 分支、以及未知
+  `precondition_fn` 的报错路径。
+
 ## 文件结构
 
 ```
@@ -137,8 +181,12 @@ PASS（`key_to_agent` 内部真实走了一轮 AUTO_REPAIR 才收敛到 PASS）�
 ├── engine.py                                 # CLI 运行时：按 --case 动态加载下面四处配置→
 │                                              # 打分→三态路由→(AUTO_REPAIR循环)→写回
 ├── agent/
-│   └── gated_loop.py                         # reason→gate→act 循环：把 gate.py 嵌进 per-action
-│                                              # pre-action authorization，复用真实 gate，不含新判定逻辑
+│   └── gated_loop.py                         # reason→gate→act 循环 + resolve_precondition()
+│                                              # （三态路由+AUTO_REPAIR+soft_commit 的共享实现，
+│                                              # mcp_server/server.py 也调用它）
+├── mcp_server/
+│   └── server.py                             # 把 gate 包成 MCP server：list_precondition_functions /
+│                                              # authorize 两个 tool，判定活证据，不是案例回放
 ├── commits/
 │   └── sydney_move_commits.yaml               # 8 个 commit 点定义（可逆性/涉及金额/打分函数名/风险配置）
 ├── bindings/
@@ -150,7 +198,8 @@ PASS（`key_to_agent` 内部真实走了一轮 AUTO_REPAIR 才收敛到 PASS）�
 ├── tests/
 │   ├── test_engine.py                         # gate.py 公式单元测试 + sydney_move 端到端回归测试
 │   ├── test_admission_gate.py                 # precondition 打分函数的准入自检（见下方"和 benchmark 类工作的关系"）
-│   └── test_gated_loop.py                     # agent loop 控制流单测 + 真实 sydney_move 数据的端到端断言
+│   ├── test_gated_loop.py                     # agent loop 控制流单测 + 真实 sydney_move 数据的端到端断言
+│   └── test_mcp_server.py                     # MCP tool 的活证据判定测试（真实 AUTO_REPAIR/ESCALATE/soft_commit）
 └── gate_record.jsonl                          # 运行后生成的判定记录（可重复生成，已提交一份跑过的样例）
 ```
 
