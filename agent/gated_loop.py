@@ -278,6 +278,15 @@ def resolve_precondition(
                 route = "ESCALATE"
                 break
             continue
+
+        if route == "AUTO_REPAIR":
+            # repair_fn 是 None：这个精度分数落进了"可以自动修"的区间，但这个
+            # precondition_fn 没有注册对应的补证函数，没有自动化手段真的去
+            # 补——不能停留在 AUTO_REPAIR 这个非终态，降级为 ESCALATE
+            # （和 k_dry 耗尽时的处理方式一致）。发现过程：用真实但非案例内的
+            # evidence 测试 MCP server 的 authorize() 时，score_air_freight_dispatch
+            # 落进 AUTO_REPAIR 区间但没有 repair_fn，暴露了这条路径。
+            route = "ESCALATE"
         break
 
     return GateResult(

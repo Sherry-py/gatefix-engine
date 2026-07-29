@@ -118,3 +118,24 @@ def test_authorize_soft_commit_supported_promise_passes():
     })
     assert result["route"] == "PASS"
     assert result["authorized"] is True
+
+
+def test_authorize_auto_repair_band_without_repair_fn_escalates_not_auto_repair():
+    """Regression test for a real bug found by live-testing this exact tool call:
+    score_air_freight_dispatch has no entry in REPAIR_REGISTRY. Evidence landing its Q
+    score in the AUTO_REPAIR band used to make authorize() return route="AUTO_REPAIR" as
+    if it were terminal -- not a value this tool's contract allows (route must be PASS,
+    ESCALATE, or BYPASS_TO_HUMAN). 2 cracked boxes with only 1 of the remaining 4 thin
+    boxes reinforced scores Q=0.7, squarely in the repair band with verifiable_ext=True,
+    but there's no automated way to actually close that gap for this function."""
+    result = authorize("sydney_move", "score_air_freight_dispatch", {
+        "cracked_boxes_count": 2,
+        "thin_boxes_count": 6,
+        "reinforced_boxes_count": 1,
+        "weight_charge_verified": True,
+        "balance_formula_verified": True,
+    })
+    assert result["route"] == "ESCALATE"
+    assert result["route"] != "AUTO_REPAIR"
+    assert result["authorized"] is False
+    assert result["repair_attempts"] == 0

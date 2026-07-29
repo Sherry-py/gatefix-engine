@@ -141,3 +141,52 @@ def test_sydney_move_case_reproduces_expected_routes():
     # friend_compensation is bypassed to human, never scored on the 4D-CQ axes.
     bypass_record = next(r for r in records if r["commit_id"] == "friend_compensation")
     assert bypass_record["bypassed_to_human"] is True
+
+
+# ---------- _resolve_regular_commit: AUTO_REPAIR must never leak out as a final route ----------
+#
+# Found via live-evidence testing of mcp_server/server.py's authorize() tool:
+# score_air_freight_dispatch has no entry in REPAIR_REGISTRY, and evidence that lands its
+# Q score in the AUTO_REPAIR band (tau_repair <= Q < tau_pass) used to make run_case return
+# route="AUTO_REPAIR" as if it were a terminal state -- not a legal value (route must be
+# PASS or ESCALATE here). The recorded sydney_move case never exercises this path because
+# air_freight_dispatch's real evidence scores Q=1.0, which is why 42 passing tests never
+# caught it. Extracted into _resolve_regular_commit specifically so this branch is testable
+# without fabricating a whole second case (commits/bindings/evidence/preconditions files),
+# which would contradict this repo's "only sydney_move is real-case-verified" disclosure.
+
+def _fake_score_fn_in_auto_repair_band(evidence):
+    return dict(R=1.0, C=0.4, O=1.0, Ro=0.4, verifiable_ext=True, notes="synthetic gap")
+
+
+def test_resolve_regular_commit_without_repair_fn_escalates_not_auto_repair():
+    config = GateConfig()
+    route, result, Q, dry_rounds, repair_attempts = engine._resolve_regular_commit(
+        config, _fake_score_fn_in_auto_repair_band, repair_fn=None, evidence={},
+    )
+    assert route == "ESCALATE"
+    assert route != "AUTO_REPAIR"
+    assert repair_attempts == 0
+
+
+def test_resolve_regular_commit_with_repair_fn_still_auto_repairs_normally():
+    """Guard against overcorrecting: a precondition_fn that DOES have a repair_fn must
+    still actually attempt the repair loop, not short-circuit to ESCALATE."""
+    config = GateConfig()
+    calls = []
+
+    def score_fn(evidence):
+        if evidence.get("repaired"):
+            return dict(R=1.0, C=1.0, O=1.0, Ro=1.0, verifiable_ext=True, notes="fixed")
+        return dict(R=1.0, C=0.4, O=1.0, Ro=0.4, verifiable_ext=True, notes="gap")
+
+    def repair_fn(evidence):
+        calls.append(evidence)
+        return {"repaired": True}
+
+    route, result, Q, dry_rounds, repair_attempts = engine._resolve_regular_commit(
+        config, score_fn, repair_fn, evidence={},
+    )
+    assert route == "PASS"
+    assert repair_attempts == 1
+    assert len(calls) == 1
