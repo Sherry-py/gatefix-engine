@@ -194,21 +194,54 @@ python mcp_server/server.py   # stdio transport，接入任何 MCP client 的方
   真实 AUTO_REPAIR 收敛、真实 ESCALATE、soft_commit 分支、以及未知
   `precondition_fn` 的报错路径。
 
+## LangGraph StateGraph —— 第四种部署形态
+
+`agent/langgraph_loop.py` 把同一套 reason → gate → act 编排换成 LangGraph 的
+`StateGraph` 来表达：`planner` → `gate` → `executor`（仅 route=="PASS" 时进入）
+/ `human_review`（非 PASS 时进入）。`gate` 节点直接调用
+`agent/gated_loop.py::resolve_precondition()`——和 CLI、`GatedAgentLoop`、
+MCP server 用的是同一个函数，这个文件不引入任何新的判定逻辑，只是换了一层
+编排壳。
+
+```bash
+pip install "langgraph==1.2.10"   # 只有跑这个文件才需要，核心引擎依赖不变
+python agent/langgraph_loop.py --case=sydney_move
+```
+
+跟 `GatedAgentLoop` 的关键区别：非 PASS 时 `GatedAgentLoop` 直接 `return`，
+这里的 `human_review` 节点调用 LangGraph 的 `interrupt()` 真正暂停图执行，
+外部通过 `Command(resume=...)` 恢复——这是这层编排壳比手写循环多出来的能力
+（可恢复的人在环暂停，不是简单终止）。跑 `--case=sydney_move` 会在
+`bond_claim_confirm`（RBO 退款账户户名不符）这一步真实触发一次 interrupt，
+打印出需要人工判断的字段，模拟一次人工回复后再 resume。
+
+**核心契约没变**：resume 收到的人工回复只会被记录进 `processed` 历史，不会
+被当成"批准"去调用 `executor`——route != PASS 时 `executor` 绝不会被调用，
+这一点和 `GatedAgentLoop` 完全一样，`tests/test_langgraph_loop.py` 里专门
+测了"人工回复'approved, go ahead'也不会让 `bond_claim_confirm` 变成 PASS"
+这一条。测试同样是真实数据端到端：前 4 个 commit 真实 PASS（`key_to_agent`
+内部真实走一轮 AUTO_REPAIR），`bond_claim_confirm` 真实触发 interrupt 并携带
+真实的中文 ESCALATE 理由。
+
 ## 文件结构
 
 ```
 .
 ├── docs/
-│   └── architecture.svg                      # 机制图：六节点最小骨架 + 公式绑定
+│   ├── architecture.svg                      # 机制图①：六节点最小骨架 + 公式绑定
+│   ├── decision_chain.svg                    # 机制图②：判定链主干 + 形式化表达 + 完整四态判定式
+│   └── autonomy_layering.svg                 # 机制图③：四态自主度谱系 + 引擎/配置分层带
 ├── gate.py                                   # 引擎核心：GateConfig（阈值/权重）+ GateRecord（判定记录结构）
 │                                              # quality_score / route / is_commit / loop_mode /
 │                                              # expectation_gate / expected_external_risk 六个公式的代码实现
 ├── engine.py                                 # CLI 运行时：按 --case 动态加载下面四处配置→
 │                                              # 打分→三态路由→(AUTO_REPAIR循环)→写回
 ├── agent/
-│   └── gated_loop.py                         # reason→gate→act 循环 + resolve_precondition()
-│                                              # （三态路由+AUTO_REPAIR+soft_commit 的共享实现，
-│                                              # mcp_server/server.py 也调用它）
+│   ├── gated_loop.py                         # reason→gate→act 循环 + resolve_precondition()
+│   │                                          # （三态路由+AUTO_REPAIR+soft_commit 的共享实现，
+│   │                                          # mcp_server/server.py、langgraph_loop.py 也调用它）
+│   └── langgraph_loop.py                     # 同一套编排换成 LangGraph StateGraph 表达，
+│                                              # human_review 节点用 interrupt()/Command(resume=…)
 ├── mcp_server/
 │   └── server.py                             # 把 gate 包成 MCP server：list_precondition_functions /
 │                                              # authorize 两个 tool，判定活证据，不是案例回放
@@ -224,7 +257,8 @@ python mcp_server/server.py   # stdio transport，接入任何 MCP client 的方
 │   ├── test_engine.py                         # gate.py 公式单元测试 + sydney_move 端到端回归测试
 │   ├── test_admission_gate.py                 # precondition 打分函数的准入自检（见下方"和 benchmark 类工作的关系"）
 │   ├── test_gated_loop.py                     # agent loop 控制流单测 + 真实 sydney_move 数据的端到端断言
-│   └── test_mcp_server.py                     # MCP tool 的活证据判定测试（真实 AUTO_REPAIR/ESCALATE/soft_commit）
+│   ├── test_mcp_server.py                     # MCP tool 的活证据判定测试（真实 AUTO_REPAIR/ESCALATE/soft_commit）
+│   └── test_langgraph_loop.py                  # StateGraph 真实数据端到端：interrupt/resume 不会让非 PASS 变 PASS
 └── gate_record.jsonl                          # 运行后生成的判定记录（可重复生成，已提交一份跑过的样例）
 ```
 
