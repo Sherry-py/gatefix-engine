@@ -1,0 +1,110 @@
+<svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg" role="img">
+<title>四态自主度谱系与领域无关引擎/领域相关配置分层带</title>
+<desc>上半部分把 PASS/AUTO_REPAIR/ESCALATE/BYPASS_TO_HUMAN 四态排成一条自主度递减、人工介入递增的谱系；下半部分展示领域无关引擎（gate.py/engine.py）与领域相关配置（commits/bindings/evidence/preconditions）的分层关系，并如实说明目前只有 sydney_move 一个场景验证过。</desc>
+<defs>
+<marker id="al-arrM" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6B6B68"/></marker>
+</defs>
+<rect x="0" y="0" width="1200" height="800" fill="#FFFFFF" stroke="none"/>
+
+<!-- Title -->
+<text x="600" y="28" font-size="19" font-weight="700" fill="#2A2A28" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">四态怎么分级自主度 + 换场景要改多少代码</text>
+<text x="600" y="48" font-size="11" font-weight="400" fill="#7A7A74" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">How the Four States Grade Autonomy + How Much Changes Per New Domain —— 第二张 / Chart 2 of 2</text>
+
+<!-- Section A: autonomy spectrum -->
+<text x="80" y="78" font-size="14.5" font-weight="700" fill="#2A2A28" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">四态自主度谱系 · Four-State Autonomy Spectrum</text>
+
+<!-- Seg1 PASS -->
+<rect x="80" y="94" width="260" height="130" rx="12" fill="#EAF6EE" stroke="#4E9B66" stroke-width="1.8"/>
+<text x="210" y="124" font-size="13.5" font-weight="700" fill="#2F6B44" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">PASS</text>
+<text x="210" y="142" font-size="10" font-weight="400" fill="#2F6B44" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">全自主 / Fully Autonomous</text>
+<text x="210" y="158" font-size="9" font-weight="400" fill="#5C5C56" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">机器独立完成判定与执行</text>
+<text x="210" y="178" font-size="8.8" font-weight="400" fill="#2F6B44" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">Q(a,E) ≥ τ_pass</text>
+<text x="210" y="200" font-size="8" font-weight="400" fill="#7A9A85" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">人工介入 = 0 / human involvement = 0</text>
+
+<!-- Seg2 AUTO_REPAIR -->
+<rect x="352" y="94" width="260" height="130" rx="12" fill="#FFF3E4" stroke="#D98E3F" stroke-width="1.8" stroke-dasharray="7,4"/>
+<text x="482" y="124" font-size="13.5" font-weight="700" fill="#8A5A1E" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">AUTO_REPAIR</text>
+<text x="482" y="142" font-size="10" font-weight="400" fill="#8A5A1E" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">半自主·自我修复 / Semi-Autonomous</text>
+<text x="482" y="158" font-size="9" font-weight="400" fill="#5C5C56" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">机器自己补证据、重新判定</text>
+<text x="482" y="178" font-size="8.8" font-weight="400" fill="#8A5A1E" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">τ_repair≤Q&lt;τ_pass ∧ verifiable_ext</text>
+<text x="482" y="200" font-size="8" font-weight="400" fill="#A9895C" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">内部收敛，不对外暴露为终态</text>
+
+<!-- Seg3 ESCALATE -->
+<rect x="624" y="94" width="260" height="130" rx="12" fill="#E5F0FA" stroke="#4C89C8" stroke-width="1.8"/>
+<text x="754" y="124" font-size="13.5" font-weight="700" fill="#2F5E8C" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">ESCALATE</text>
+<text x="754" y="142" font-size="10" font-weight="400" fill="#2F5E8C" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">人工终审 / Human Sign-off</text>
+<text x="754" y="158" font-size="9" font-weight="400" fill="#5C5C56" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">机器先判定证据不够，再转人工</text>
+<text x="754" y="178" font-size="8.8" font-weight="400" fill="#2F5E8C" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">¬verifiable_ext ∨ Q&lt;τ_repair</text>
+<text x="754" y="200" font-size="8" font-weight="400" fill="#7098BC" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">人工介入 = 终审一次</text>
+
+<!-- Seg4 BYPASS_TO_HUMAN -->
+<rect x="896" y="94" width="260" height="130" rx="12" fill="#F1EEFB" stroke="#7B6CC8" stroke-width="1.8"/>
+<text x="1026" y="124" font-size="13.5" font-weight="700" fill="#4E4390" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">BYPASS_TO_HUMAN</text>
+<text x="1026" y="142" font-size="10" font-weight="400" fill="#4E4390" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">纯人工 / Fully Human</text>
+<text x="1026" y="158" font-size="9" font-weight="400" fill="#5C5C56" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">机器从一开始就不参与判断</text>
+<text x="1026" y="178" font-size="8.8" font-weight="400" fill="#4E4390" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">bypass_to_human = True</text>
+<text x="1026" y="200" font-size="8" font-weight="400" fill="#8B7FB8" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">人情类证据 / relational evidence</text>
+
+<!-- autonomy gradient arrow -->
+<text x="600" y="240" font-size="9.5" font-weight="700" fill="#5C5C56" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">自主度递减，人工介入递增 / autonomy decreases, human involvement increases</text>
+<path d="M100 252 L1100 252" fill="none" stroke="#9A9A92" stroke-width="1.6" marker-end="url(#al-arrM)"/>
+
+<!-- Section B: engine vs config layering -->
+<text x="80" y="286" font-size="14.5" font-weight="700" fill="#2A2A28" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">领域无关引擎 / 领域相关配置分层带 · Domain-Agnostic Engine vs Domain-Specific Config</text>
+<text x="80" y="304" font-size="9.5" font-weight="400" fill="#7A7A74" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">同一个引擎，换 4 份配置就能挂一个新场景 / same engine — swap 4 config files to onboard a new domain</text>
+
+<!-- Engine band -->
+<rect x="80" y="318" width="1040" height="106" rx="12" fill="#F1EEFB" stroke="#B7ACDD" stroke-width="1.6"/>
+<text x="100" y="338" font-size="11.5" font-weight="700" fill="#4E4390" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">领域无关引擎 / Domain-Agnostic Engine —— 任何场景都不改这两个文件</text>
+
+<rect x="100" y="352" width="490" height="58" rx="10" fill="#FFFFFF" stroke="#7B6CC8" stroke-width="1.6"/>
+<text x="345" y="374" font-size="11.5" font-weight="700" fill="#4E4390" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">gate.py —— 6 个公式</text>
+<text x="345" y="392" font-size="8.3" font-weight="400" fill="#6E6E68" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">quality_score / route / is_commit / loop_mode / expectation_gate / expected_external_risk</text>
+
+<rect x="610" y="352" width="490" height="58" rx="10" fill="#FFFFFF" stroke="#7B6CC8" stroke-width="1.6"/>
+<text x="855" y="374" font-size="11.5" font-weight="700" fill="#4E4390" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">engine.py —— CLI 运行时</text>
+<text x="855" y="392" font-size="8.3" font-weight="400" fill="#6E6E68" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">importlib 按 --case 动态加载下面 4 处配置，不改一行引擎代码</text>
+
+<path d="M600 424 L600 452" fill="none" stroke="#6B6B68" stroke-width="1.6" marker-end="url(#al-arrM)"/>
+<text x="614" y="442" font-size="9" font-weight="400" fill="#5C5C56" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">按 --case 动态加载 / loaded dynamically by --case</text>
+
+<!-- Config band -->
+<rect x="80" y="452" width="1040" height="150" rx="12" fill="#FDECEE" stroke="#E3A9AF" stroke-width="1.6"/>
+<text x="100" y="472" font-size="11.5" font-weight="700" fill="#A03B45" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">领域相关配置 / Domain-Specific Config —— 换场景就换这 4 份文件</text>
+
+<rect x="100" y="486" width="235" height="100" rx="10" fill="#FFFFFF" stroke="#CE5560" stroke-width="1.6"/>
+<text x="217" y="510" font-size="10.5" font-weight="700" fill="#A03B45" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">commits/</text>
+<text x="217" y="526" font-size="9" font-weight="400" fill="#A03B45" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">sydney_move_commits.yaml</text>
+<text x="217" y="546" font-size="8.3" font-weight="400" fill="#6E6E68" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">8 个 commit 点定义</text>
+<text x="217" y="562" font-size="8.3" font-weight="400" fill="#6E6E68" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">可逆性/金额/打分函数名</text>
+
+<rect x="355" y="486" width="235" height="100" rx="10" fill="#FFFFFF" stroke="#CE5560" stroke-width="1.6"/>
+<text x="472" y="510" font-size="10.5" font-weight="700" fill="#A03B45" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">bindings/</text>
+<text x="472" y="526" font-size="9" font-weight="400" fill="#A03B45" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">sydney_move_bindings.yaml</text>
+<text x="472" y="546" font-size="8.3" font-weight="400" fill="#6E6E68" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">每个 commit 绑定真实执行人</text>
+<text x="472" y="562" font-size="8.3" font-weight="400" fill="#6E6E68" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">角色标注，姓名已脱敏</text>
+
+<rect x="610" y="486" width="235" height="100" rx="10" fill="#FFFFFF" stroke="#CE5560" stroke-width="1.6"/>
+<text x="727" y="510" font-size="10.5" font-weight="700" fill="#A03B45" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">evidence/</text>
+<text x="727" y="526" font-size="9" font-weight="400" fill="#A03B45" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">sydney_move_evidence.yaml</text>
+<text x="727" y="546" font-size="8.3" font-weight="400" fill="#6E6E68" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">真实案例证据（8 条）</text>
+<text x="727" y="562" font-size="8.3" font-weight="400" fill="#6E6E68" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">MCP server 判的是活证据版本</text>
+
+<rect x="865" y="486" width="235" height="100" rx="10" fill="#FFFFFF" stroke="#CE5560" stroke-width="1.6"/>
+<text x="982" y="510" font-size="10.5" font-weight="700" fill="#A03B45" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">preconditions/</text>
+<text x="982" y="526" font-size="9" font-weight="400" fill="#A03B45" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">sydney_move.py</text>
+<text x="982" y="546" font-size="8.3" font-weight="400" fill="#6E6E68" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">7 个打分函数 REGISTRY</text>
+<text x="982" y="562" font-size="8.3" font-weight="400" fill="#6E6E68" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">REPAIR_REGISTRY 可选</text>
+
+<!-- Honest caveat -->
+<rect x="80" y="612" width="1040" height="68" rx="10" fill="#F7F5EE" stroke="#B8B8AE" stroke-width="1.6"/>
+<text x="600" y="636" font-size="11" font-weight="700" fill="#3A3A36" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">如实说明 / Honest Caveat：目前只有 sydney_move 一个场景真实跑通过</text>
+<text x="600" y="656" font-size="9.5" font-weight="400" fill="#6E6E68" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">换场景不用改引擎是架构设计意图，还没有被第二个真实场景验证过 / the engine/config split is architectural intent, not yet proven by a second real domain</text>
+
+<!-- Synthesis footer tying chart 1 and chart 2 together -->
+<rect x="80" y="692" width="1040" height="66" rx="10" fill="#FCEACB" stroke="#C9820A" stroke-width="1.6"/>
+<text x="600" y="716" font-size="11" font-weight="700" fill="#7A4A0A" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">两张合起来 / Together：第一张回答"要不要放行"，第二张回答"换场景要改多少代码"</text>
+<text x="600" y="736" font-size="9.5" font-weight="400" fill="#8A6A1E" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">判定逻辑与工程结构是同一套系统的两个切面 / decision logic and engineering structure are two faces of one system</text>
+
+<text x="600" y="784" font-size="9.5" font-weight="400" fill="#9A9A92" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">第一张（判定链）：docs/decision_chain.svg · Chart 1 (decision chain)</text>
+</svg>
