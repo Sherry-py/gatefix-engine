@@ -269,11 +269,49 @@ case 名动态加载这四处，不需要改 `engine.py` 里的任何一行。
 这是"引擎领域无关、配置领域相关"这条设计原则的落地方式——描述的是架构能力，
 不是已用多个场景验证过的复用性结论（现状见上文"这个项目证明什么"）。
 
-## 和 benchmark 类工作（如 WorkBuddy Bench）的关系
+## 在 agent 生态里的位置
 
-腾讯 Youtu Lab 等团队近期发布的 **WorkBuddy Bench**（arXiv:2607.20911v1）是一个
-260 任务的多领域 coding-agent benchmark。两者不是同类工作，对比一下能说清楚
-GateFix 在做什么：
+### 和编排框架（LangGraph / CrewAI / Relevance AI / Coze 这类）的关系
+
+LangGraph 用图结构编排 state，CrewAI 用角色化 crew 分工，Relevance AI /
+Coze 这类无代码平台把编排包装成拖拽界面——它们负责"agent 怎么想、怎么调
+工具、怎么协作"。GateFix 不做这些，也不是要跟它们竞争：它是"编排跑到
+关键动作前，要不要放行"这一层判定，设计上就是要接进别人的编排循环，不是
+自己再造一个。已验证的接入方式：MCP tool（任何支持 MCP 协议的 client）、
+LangGraph StateGraph 节点（见上文）。
+
+已有的同类真实产品：**Alter**（SDK 给每次工具调用包一层参数级
+guardrail）、**Aport**（开源，框架 pre-action hook + 可携带的 agent
+passport）——都是"在推理和真正执行之间插一道独立判定"的不同实现。GateFix
+的差异化：判定标准是可解释的 4D-CQ 确定性打分，不是简单参数校验；路由是
+完整四态（PASS/AUTO_REPAIR/ESCALATE/BYPASS_TO_HUMAN），不是二元允许/拒绝。
+
+**如实说明边界**：能直接复用的是判定引擎和接入方式（`gate.py`/`engine.py`，
+领域无关），**判定标准本身**（`preconditions/<case>.py` 里的打分函数）要
+跟着具体业务重写——不是换个业务就能直接用的黑箱，是"怎么把领域知识变成
+可判定规则"的方法论 + 一个不用重写的判定引擎。
+
+### 谁可以直接拿来用
+
+- **正在给 agent 加执行前授权闸门、但还没有确定性判定层的团队**——关键
+  动作（不可逆、涉及金额、涉及第三方）现在要么没人管，要么只有一个"确认
+  按钮"糊弄过去；接一个 gate 进去，不用重写编排逻辑。
+- **需要给 agent 决策留可审计记录的团队**——谁批准的、根据什么证据、什么
+  时候，而不是一堆聊天日志（对应 `gate_record.jsonl`）。
+- **已经在用评分/reward 函数判断 agent 做得好不好、但不确定标准本身有没
+  有区分度的团队**——能不能分清"没做"和"做完"（准入自检方法论详见下节）。
+- **想要三态而不是二态路由的团队**——不只是允许/拒绝，还要"证据不够但能
+  自动补一次"（AUTO_REPAIR）这种中间态。
+
+**不适合的场景**：agent 完全在低风险、可逆的操作空间里工作（纯读操作、
+草稿生成）——加一层 gate 是不必要的开销；判定高度依赖多轮上下文/会话状态
+——这套东西证据是一次性传入的，不做上下文管理。
+
+### 和 benchmark 类工作（如 WorkBuddy Bench）的关系
+
+腾讯 Youtu Lab 等团队近期发布的 **WorkBuddy Bench**（arXiv:2607.20911v1）是
+一个 260 任务的多领域 coding-agent benchmark，和 GateFix 是另一条邻近但不同
+的轴——评估维度而非编排维度：
 
 - **准入自检**：WorkBuddy Bench 要求收录任务满足 baseline_reward ≤ 0.3、
   oracle_reward = 1.0，确保判分标准本身能区分"没做"和"做完"。
