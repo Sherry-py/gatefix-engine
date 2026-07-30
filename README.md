@@ -28,35 +28,21 @@ Rosebery 公寓远程退租真实发生过的事——包括案例后期新增�
 代码跑的是真实数据，不是虚构 case。第三方（中介、楼管、货代等）的姓名已替换为身份角色标注，
 金额与事实细节保留真实。
 
-## 机制图
+## 谁可以直接拿来用
 
-![GateFix core engine — six-node skeleton with formula bindings](docs/architecture.svg)
+- **正在给 agent 加执行前授权闸门、但还没有确定性判定层的团队**——关键
+  动作（不可逆、涉及金额、涉及第三方）现在要么没人管，要么只有一个"确认
+  按钮"糊弄过去；接一个 gate 进去，不用重写编排逻辑。
+- **需要给 agent 决策留可审计记录的团队**——谁批准的、根据什么证据、什么
+  时候，而不是一堆聊天日志（对应 `gate_record.jsonl`）。
+- **已经在用评分/reward 函数判断 agent 做得好不好、但不确定标准本身有没
+  有区分度的团队**——能不能分清"没做"和"做完"（准入自检方法论见下文）。
+- **想要三态而不是二态路由的团队**——不只是允许/拒绝，还要"证据不够但能
+  自动补一次"（AUTO_REPAIR）这种中间态。
 
-这张图是引擎的最小骨架：组装上下文→LLM 推理提案→Precondition 判定→三态路由→执行/人工审批→写回，
-每个节点标注了对应的公式。下面的 `gate.py` / `engine.py` 就是这张图的直接代码实现——图里的
-③Precondition 判定对应 `preconditions/sydney_move.py` 里的打分函数，④三态路由对应 `gate.py` 里的
-`GateConfig.route()`，⑤a/⑤b 对应 `engine.py` 里 AUTO_REPAIR 循环和 ESCALATE/BYPASS_TO_HUMAN 分支。
-
-下面两张图从另外两个角度拆开看同一套系统：判定链具体怎么走一遍，以及工程上怎么落地。
-
-### 判定链：Harness = 何时必须停 + 停下来看什么 + 谁来拍板
-
-![GateFix decision chain — formal expression, three components, complete four-state route formula](docs/decision_chain.svg)
-
-顶部是这套方法论的形式化表达 `Commit(a,E) = Human_Gate(a) ∧ ⋀ᵢ Pᵢ(E,θᵢ)`；中段判定链依次是
-`is_commit(a)`（从不可逆代价反推需要闸门的动作点，对应 `gate.py::is_commit()`）、`Pᵢ(E,θᵢ)`
-（4D-CQ 证据质量判定，对应 `preconditions/<case>.py::REGISTRY`）、`Human_Gate(a)`（人机授权布尔量，
-对应 `engine.py` 里 ESCALATE/BYPASS_TO_HUMAN 分支）；底部是完整的四态 route 判定式。每个节点右侧
-都标了对应的代码位置——这是一条可以对着真实代码逐节点讲下去的判定链，不是纯理论图。
-
-### 四态自主度谱系 + 领域无关引擎/领域相关配置分层带
-
-![GateFix autonomy spectrum and engine/config layering](docs/autonomy_layering.svg)
-
-上半部分把 PASS / AUTO_REPAIR / ESCALATE / BYPASS_TO_HUMAN 排成一条自主度递减、人工介入递增的
-谱系；下半部分展示"领域无关引擎"（`gate.py` + `engine.py`，任何场景都不改这两个文件）和"领域相关
-配置"（`commits` / `bindings` / `evidence` / `preconditions` 四份文件，换场景就换这几处）之间的
-分层关系——这是对"能不能落地"这个问题最直接的证据（单场景验证现状见下节）。
+**不适合的场景**：agent 完全在低风险、可逆的操作空间里工作（纯读操作、
+草稿生成）——加一层 gate 是不必要的开销；判定高度依赖多轮上下文/会话状态
+——这套东西证据是一次性传入的，不做上下文管理。
 
 ## 这个项目证明什么
 
@@ -89,6 +75,88 @@ Relevance/Coverage/Ordering/Robustness）、以及**谁最终对这个判定负�
   这是本框架这次新增的理论点：**Commit(a,E)=True 不代表总成本已确定**，
   海关抽查这类第三方裁量风险不会因为 gate 放行就清零。
 
+## 这不是什么
+
+### 不跟编排框架抢地盘（LangGraph / CrewAI / Relevance AI / Coze 这类）
+
+LangGraph 用图结构编排 state，CrewAI 用角色化 crew 分工，Relevance AI /
+Coze 这类无代码平台把编排包装成拖拽界面——它们负责"agent 怎么想、怎么调
+工具、怎么协作"。GateFix 不做这些，也不是要跟它们竞争：它是"编排跑到
+关键动作前，要不要放行"这一层判定，设计上就是要接进别人的编排循环，不是
+自己再造一个。已验证的接入方式：MCP tool（任何支持 MCP 协议的 client）、
+LangGraph StateGraph 节点（见下文"三种代码级接入方式"）。
+
+已有的同类真实产品：**Alter**（SDK 给每次工具调用包一层参数级
+guardrail）、**Aport**（开源，框架 pre-action hook + 可携带的 agent
+passport）——都是"在推理和真正执行之间插一道独立判定"的不同实现。GateFix
+的差异化：判定标准是可解释的 4D-CQ 确定性打分，不是简单参数校验；路由是
+完整四态（PASS/AUTO_REPAIR/ESCALATE/BYPASS_TO_HUMAN），不是二元允许/拒绝。
+
+**如实说明边界**：能直接复用的是判定引擎和接入方式（`gate.py`/`engine.py`，
+领域无关），**判定标准本身**（`preconditions/<case>.py` 里的打分函数）要
+跟着具体业务重写——不是换个业务就能直接用的黑箱，是"怎么把领域知识变成
+可判定规则"的方法论 + 一个不用重写的判定引擎。
+
+### 不是 benchmark，也不是 LLM judge
+
+腾讯 Youtu Lab 等团队近期发布的 **WorkBuddy Bench**（arXiv:2607.20911v1）是
+一个 260 任务的多领域 coding-agent benchmark，和 GateFix 是另一条邻近但不同
+的轴——评估维度而非编排维度：
+
+- **准入自检**：WorkBuddy Bench 要求收录任务满足 baseline_reward ≤ 0.3、
+  oracle_reward = 1.0，确保判分标准本身能区分"没做"和"做完"。
+  `tests/test_admission_gate.py` 对 `preconditions/sydney_move.py` 里的打分函数
+  做了同类自检——分别喂 baseline（真实证据缺口）和 oracle（补齐后）的证据，
+  断言前者的 `route()` 不能是 PASS、后者必须是 PASS。
+- **Q 与风险大小正交**：4D-CQ 质量分只判断证据本身够不够格，不看金额或可逆性——
+  那部分由 `IsCommit`/`LoopMode`/`Risk_ext` 单独处理，同一条 τ_pass=0.85 同时
+  用于 ¥50 的"扔弃物品"和 ¥17,100 的"空运纸箱交运"。
+- **评估对象不同**：WorkBuddy Bench 是事后能力评估——任务跑完后打分，衡量
+  agent 能不能独立完成整个任务。GateFix 是事中风险拦截——判断某个具体动作
+  在变得不可逆之前能不能自动放行。二者可以在同一个生产系统里叠加，不是
+  互相替代的关系。
+- **判"证据够不够格"，不判"过程对不对"，且用代码判，不用 LLM 当裁判**：
+  router/trajectory 这类 LLM-as-judge 评估问的是"agent 有没有选对工具、
+  推理链条合不合理"——评的是决策过程本身。GateFix 的 4D-CQ 问的是不同的
+  问题：不管推理多漂亮，这个具体动作现在有没有足够证据放行。
+  `bond_claim_confirm` 就是个例子——扣除项在约定范围内、逻辑没错，但退款
+  账户户名跟委托人不符，这不是"推理错了"，是"证据不够、需要人核实关系"，
+  一个推理完美的 agent 照样会被拦下。`preconditions/sydney_move.py` 的
+  7 个打分函数全是确定性规则代码，不调 LLM 打分——可审计、可复现、不随
+  裁判模型改版漂移，代价是只能评提前写成规则的东西。两者不是替代关系：
+  router/trajectory eval 是开发期调试 agent 决策质量的镜子，GateFix 是
+  运行时拦截真实后果的闸门。
+
+## 机制图
+
+![GateFix core engine — six-node skeleton with formula bindings](docs/architecture.svg)
+
+这张图是引擎的最小骨架：组装上下文→LLM 推理提案→Precondition 判定→三态路由→执行/人工审批→写回，
+每个节点标注了对应的公式。下面的 `gate.py` / `engine.py` 就是这张图的直接代码实现——图里的
+③Precondition 判定对应 `preconditions/sydney_move.py` 里的打分函数，④三态路由对应 `gate.py` 里的
+`GateConfig.route()`，⑤a/⑤b 对应 `engine.py` 里 AUTO_REPAIR 循环和 ESCALATE/BYPASS_TO_HUMAN 分支。
+
+下面两张图从另外两个角度拆开看同一套系统：判定链具体怎么走一遍，以及工程上怎么落地。
+
+### 判定链：Harness = 何时必须停 + 停下来看什么 + 谁来拍板
+
+![GateFix decision chain — formal expression, three components, complete four-state route formula](docs/decision_chain.svg)
+
+顶部是这套方法论的形式化表达 `Commit(a,E) = Human_Gate(a) ∧ ⋀ᵢ Pᵢ(E,θᵢ)`；中段判定链依次是
+`is_commit(a)`（从不可逆代价反推需要闸门的动作点，对应 `gate.py::is_commit()`）、`Pᵢ(E,θᵢ)`
+（4D-CQ 证据质量判定，对应 `preconditions/<case>.py::REGISTRY`）、`Human_Gate(a)`（人机授权布尔量，
+对应 `engine.py` 里 ESCALATE/BYPASS_TO_HUMAN 分支）；底部是完整的四态 route 判定式。每个节点右侧
+都标了对应的代码位置——这是一条可以对着真实代码逐节点讲下去的判定链，不是纯理论图。
+
+### 四态自主度谱系 + 领域无关引擎/领域相关配置分层带
+
+![GateFix autonomy spectrum and engine/config layering](docs/autonomy_layering.svg)
+
+上半部分把 PASS / AUTO_REPAIR / ESCALATE / BYPASS_TO_HUMAN 排成一条自主度递减、人工介入递增的
+谱系；下半部分展示"领域无关引擎"（`gate.py` + `engine.py`，任何场景都不改这两个文件）和"领域相关
+配置"（`commits` / `bindings` / `evidence` / `preconditions` 四份文件，换场景就换这几处）之间的
+分层关系——这是对"能不能落地"这个问题最直接的证据（单场景验证现状见上文"这个项目证明什么"）。
+
 ## 怎么跑
 
 ```bash
@@ -114,11 +182,15 @@ route 结果跟本 README 里描述的完全一致。改了 `commits/sydney_move
 回归测试验证的是"sydney_move 这一个场景的判定结果没被意外改坏"——不是"多场景都能跑"，
 后者目前没有测试覆盖，因为目前也只有一个场景。
 
-## Agent loop 里的 pre-action authorization
+## 三种代码级接入方式
 
-上面跑的是"一次性判一个 case"。`agent/gated_loop.py` 把同一套 gate 判定嵌进一个
-显式的 reason → gate → act 循环，演示"每一步动作执行前先授权"这个更贴近真实
-agent 部署形态的用法。
+上面跑的是"一次性判一个 case"。下面三种是把同一个 gate 接进真实 agent 部署形态的方式——
+都调用同一个 `resolve_precondition()`，不是三套判定逻辑。
+
+### Agent loop：pre-action authorization
+
+`agent/gated_loop.py` 把同一套 gate 判定嵌进一个显式的 reason → gate → act 循环，
+演示"每一步动作执行前先授权"这个用法。
 
 ```bash
 python agent/gated_loop.py --case=sydney_move
@@ -146,7 +218,7 @@ PASS（`key_to_agent` 内部真实走了一轮 AUTO_REPAIR 才收敛到 PASS）�
   `make_case_gate_fn("sydney_move")` 跑真实 case 数据，断言上面这条真实轨迹
   （AUTO_REPAIR 收敛、ESCALATE 阻断、`tool_fn` 未被调用）。
 
-## 把 gate 包成 MCP server
+### 把 gate 包成 MCP server
 
 `mcp_server/server.py` 把同一个 gate 暴露成两个 MCP tool，供任何 MCP client
 （Claude Desktop、其他 agent 框架……）调用。和上面 `agent/gated_loop.py` 的
@@ -191,7 +263,7 @@ python mcp_server/server.py   # stdio transport，接入任何 MCP client 的方
   真实 AUTO_REPAIR 收敛、真实 ESCALATE、soft_commit 分支、以及未知
   `precondition_fn` 的报错路径。
 
-## LangGraph StateGraph —— 第四种部署形态
+### LangGraph StateGraph
 
 用 LangGraph 的 `StateGraph` 表达同一套 reason → gate → act：
 `planner` → `gate` → `executor`（仅 route=="PASS" 时进入）/ `human_review`
@@ -251,7 +323,7 @@ python agent/langgraph_loop.py --case=sydney_move
 │   └── sydney_move_evidence.yaml              # 真实案例证据（8 条，含案例后期新增的纸箱/关税事件）
 ├── tests/
 │   ├── test_engine.py                         # gate.py 公式单元测试 + sydney_move 端到端回归测试
-│   ├── test_admission_gate.py                 # precondition 打分函数的准入自检（见下方"和 benchmark 类工作的关系"）
+│   ├── test_admission_gate.py                 # precondition 打分函数的准入自检（见上文"不是 benchmark，也不是 LLM judge"）
 │   ├── test_gated_loop.py                     # agent loop 控制流单测 + 真实 sydney_move 数据的端到端断言
 │   ├── test_mcp_server.py                     # MCP tool 的活证据判定测试（真实 AUTO_REPAIR/ESCALATE/soft_commit）
 │   └── test_langgraph_loop.py                  # StateGraph 真实数据端到端：interrupt/resume 不会让非 PASS 变 PASS
@@ -268,74 +340,6 @@ case 名动态加载这四处，不需要改 `engine.py` 里的任何一行。
 
 这是"引擎领域无关、配置领域相关"这条设计原则的落地方式——描述的是架构能力，
 不是已用多个场景验证过的复用性结论（现状见上文"这个项目证明什么"）。
-
-## 在 agent 生态里的位置
-
-### 和编排框架（LangGraph / CrewAI / Relevance AI / Coze 这类）的关系
-
-LangGraph 用图结构编排 state，CrewAI 用角色化 crew 分工，Relevance AI /
-Coze 这类无代码平台把编排包装成拖拽界面——它们负责"agent 怎么想、怎么调
-工具、怎么协作"。GateFix 不做这些，也不是要跟它们竞争：它是"编排跑到
-关键动作前，要不要放行"这一层判定，设计上就是要接进别人的编排循环，不是
-自己再造一个。已验证的接入方式：MCP tool（任何支持 MCP 协议的 client）、
-LangGraph StateGraph 节点（见上文）。
-
-已有的同类真实产品：**Alter**（SDK 给每次工具调用包一层参数级
-guardrail）、**Aport**（开源，框架 pre-action hook + 可携带的 agent
-passport）——都是"在推理和真正执行之间插一道独立判定"的不同实现。GateFix
-的差异化：判定标准是可解释的 4D-CQ 确定性打分，不是简单参数校验；路由是
-完整四态（PASS/AUTO_REPAIR/ESCALATE/BYPASS_TO_HUMAN），不是二元允许/拒绝。
-
-**如实说明边界**：能直接复用的是判定引擎和接入方式（`gate.py`/`engine.py`，
-领域无关），**判定标准本身**（`preconditions/<case>.py` 里的打分函数）要
-跟着具体业务重写——不是换个业务就能直接用的黑箱，是"怎么把领域知识变成
-可判定规则"的方法论 + 一个不用重写的判定引擎。
-
-### 谁可以直接拿来用
-
-- **正在给 agent 加执行前授权闸门、但还没有确定性判定层的团队**——关键
-  动作（不可逆、涉及金额、涉及第三方）现在要么没人管，要么只有一个"确认
-  按钮"糊弄过去；接一个 gate 进去，不用重写编排逻辑。
-- **需要给 agent 决策留可审计记录的团队**——谁批准的、根据什么证据、什么
-  时候，而不是一堆聊天日志（对应 `gate_record.jsonl`）。
-- **已经在用评分/reward 函数判断 agent 做得好不好、但不确定标准本身有没
-  有区分度的团队**——能不能分清"没做"和"做完"（准入自检方法论详见下节）。
-- **想要三态而不是二态路由的团队**——不只是允许/拒绝，还要"证据不够但能
-  自动补一次"（AUTO_REPAIR）这种中间态。
-
-**不适合的场景**：agent 完全在低风险、可逆的操作空间里工作（纯读操作、
-草稿生成）——加一层 gate 是不必要的开销；判定高度依赖多轮上下文/会话状态
-——这套东西证据是一次性传入的，不做上下文管理。
-
-### 和 benchmark 类工作（如 WorkBuddy Bench）的关系
-
-腾讯 Youtu Lab 等团队近期发布的 **WorkBuddy Bench**（arXiv:2607.20911v1）是
-一个 260 任务的多领域 coding-agent benchmark，和 GateFix 是另一条邻近但不同
-的轴——评估维度而非编排维度：
-
-- **准入自检**：WorkBuddy Bench 要求收录任务满足 baseline_reward ≤ 0.3、
-  oracle_reward = 1.0，确保判分标准本身能区分"没做"和"做完"。
-  `tests/test_admission_gate.py` 对 `preconditions/sydney_move.py` 里的打分函数
-  做了同类自检——分别喂 baseline（真实证据缺口）和 oracle（补齐后）的证据，
-  断言前者的 `route()` 不能是 PASS、后者必须是 PASS。
-- **Q 与风险大小正交**：4D-CQ 质量分只判断证据本身够不够格，不看金额或可逆性——
-  那部分由 `IsCommit`/`LoopMode`/`Risk_ext` 单独处理，同一条 τ_pass=0.85 同时
-  用于 ¥50 的"扔弃物品"和 ¥17,100 的"空运纸箱交运"。
-- **评估对象不同**：WorkBuddy Bench 是事后能力评估——任务跑完后打分，衡量
-  agent 能不能独立完成整个任务。GateFix 是事中风险拦截——判断某个具体动作
-  在变得不可逆之前能不能自动放行。二者可以在同一个生产系统里叠加，不是
-  互相替代的关系。
-- **判"证据够不够格"，不判"过程对不对"，且用代码判，不用 LLM 当裁判**：
-  router/trajectory 这类 LLM-as-judge 评估问的是"agent 有没有选对工具、
-  推理链条合不合理"——评的是决策过程本身。GateFix 的 4D-CQ 问的是不同的
-  问题：不管推理多漂亮，这个具体动作现在有没有足够证据放行。
-  `bond_claim_confirm` 就是个例子——扣除项在约定范围内、逻辑没错，但退款
-  账户户名跟委托人不符，这不是"推理错了"，是"证据不够、需要人核实关系"，
-  一个推理完美的 agent 照样会被拦下。`preconditions/sydney_move.py` 的
-  7 个打分函数全是确定性规则代码，不调 LLM 打分——可审计、可复现、不随
-  裁判模型改版漂移，代价是只能评提前写成规则的东西。两者不是替代关系：
-  router/trajectory eval 是开发期调试 agent 决策质量的镜子，GateFix 是
-  运行时拦截真实后果的闸门。
 
 ## Case notes
 
