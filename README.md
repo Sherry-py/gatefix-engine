@@ -1,24 +1,33 @@
-# GateFix —— AI Agent 执行前授权闸门（判定引擎用真实退租案例验证）
+# GateFix —— 从真实业务流程提炼的执行前授权方法论（直接适用于 AI Agent 治理）
 
 [![CI](https://github.com/Sherry-py/gatefix-engine/actions/workflows/ci.yml/badge.svg)](https://github.com/Sherry-py/gatefix-engine/actions/workflows/ci.yml)
 
-**TL;DR (English):** Whether an AI agent may act on its own shouldn't be decided
-by "is there a confirm button" — it should be decided by whether the action is
-*reversible*, whether the evidence covers four quality dimensions (Relevance /
-Coverage / Ordering / Robustness), and what residual external risk survives
-even after approval. This repo is a small, runnable engine (`gate.py` +
-`engine.py`, ~250 lines, one dependency) that encodes that decision rule and
-runs it end-to-end on a real case: an 8-commit, cross-border, remote
-lease-termination in Sydney, with real dollar amounts and real third-party
-executors (names replaced with role labels, facts kept real).
-`python engine.py run --case=sydney_move` reproduces all 8 routing decisions
-deterministically — no LLM call needed, the decision logic itself is the
-point.
+**TL;DR (English):** This project distills a judgment rule from a real,
+high-stakes business process — not from a need to govern AI agents. The
+rule answers: when a human and a machine collaborate on an irreversible
+process, who should be allowed to proceed, and when? It shouldn't be
+decided by "is there a confirm button" — it should be decided by whether
+the action is *reversible*, whether the evidence covers four quality
+dimensions (Relevance / Coverage / Ordering / Robustness), and what
+residual external risk survives even after approval. The same rule applies
+directly to AI agent pre-action authorization, since "an agent proposes an
+action, the system decides whether to allow it" is structurally identical
+to "a person executes one step, and needs to know whether to stop." This
+repo is a small, runnable engine (`gate.py` + `engine.py`, ~250 lines, one
+dependency) that encodes that decision rule and runs it end-to-end on the
+real case it came from: an 8-commit, cross-border, remote lease-termination
+in Sydney, with real dollar amounts and real third-party executors (names
+replaced with role labels, facts kept real). `python engine.py run
+--case=sydney_move` reproduces all 8 routing decisions deterministically —
+no LLM call needed, the decision logic itself is the point.
 
-**给非技术读者的话：** 这个项目回答一个问题——AI agent 什么时候能自己往下做，
-什么时候必须停下来问人？答案不该是"有没有一个确认按钮"，而是这个动作
-（1）能不能反悔、（2）证据够不够充分、（3）就算放行了还剩多少甩不掉的外部风险。
-案例是一次真实发生的悉尼公寓远程退租：委托人已经回国，钥匙、家具、清洁、
+**给非技术读者的话：** 这套判定规则不是从"给 AI agent 加治理"这个需求出发的，
+是从一次真实、高风险的业务流程里提炼出来的——当人和机器协作执行一个不可逆的
+流程时，谁该在什么时候被允许继续往下做？答案不该是"有没有一个确认按钮"，而是
+这个动作（1）能不能反悔、（2）证据够不够充分、（3）就算放行了还剩多少甩不掉的
+外部风险。同一条规则直接适用于 AI agent 的执行前授权，因为"agent 提出一个
+动作、系统决定放不放行"和"人执行流程里的一步、要不要先停下来"结构上是同一个
+问题。案例是一次真实发生的悉尼公寓远程退租：委托人已经回国，钥匙、家具、清洁、
 中介结算全部要靠 8 个不可逆决策点和多个人类执行器远程完成。代码跑一遍，
 就能看到框架把这 8 个决策点分别判成"直接放行""自动补证据再判""必须叫人终审"
 "这事儿机器判不了、直接交给人"四种结果——全部对应真实发生过的事，不是编的。
@@ -28,10 +37,11 @@ Rosebery 公寓远程退租真实发生过的事——包括案例后期新增�
 代码跑的是真实数据，不是虚构 case。第三方（中介、楼管、货代等）的姓名已替换为身份角色标注，
 金额与事实细节保留真实。
 
-**如实说明**：案例里的动作是真人（委托人）当时做出的真实决策，原始事件里没有 AI agent。
-这份代码把这些决策当作 agent 的候选动作跑一遍判定引擎——这样做是因为引擎本身不关心
-"谁提的动作"，只关心"证据够不够格"；用真实决策喂真实证据，验证的正是这个不关心提案
-来源的判定核心在真实场景里站不站得住。
+**如实说明出发点**：这套方法论不是先做了一个 AI agent、再想办法管它——它是从
+一次真实业务流程（悉尼退租）的执行前治理需求里提炼出来的，原始场景里做决策的
+是真人。AI agent 治理是这套方法论自然覆盖的一种情况，不是它的起点：只要"谁在
+执行下一步"这个问题存在（不管执行者是人、脚本还是 agent），判定逻辑关心的都是
+同一件事——证据够不够格放行。
 
 ## 谁可以直接拿来用
 
