@@ -1,4 +1,4 @@
-# GateFix —— 从真实业务流程提炼的执行前授权方法论（直接适用于 AI Agent 治理）
+# GateFix —— 从真实业务流程提炼的确定性执行前授权方法论（Agent Harness 里的 Guardrails 层）
 
 [![CI](https://github.com/Sherry-py/gatefix-engine/actions/workflows/ci.yml/badge.svg)](https://github.com/Sherry-py/gatefix-engine/actions/workflows/ci.yml)
 
@@ -42,6 +42,14 @@ Rosebery 公寓远程退租真实发生过的事——包括案例后期新增�
 是真人。AI agent 治理是这套方法论自然覆盖的一种情况，不是它的起点：只要"谁在
 执行下一步"这个问题存在（不管执行者是人、脚本还是 agent），判定逻辑关心的都是
 同一件事——证据够不够格放行。
+
+这套 Guardrails 层的形态不是照着行业框架图设计出来的，是这次真实退租案例逼出来
+的：8 个决策点里有好几个一旦做错就无法挽回（钥匙一旦移交、纸箱一旦交运海关就不
+受控），当时唯一能安全推进的办法就是给每一步定死"什么证据够、什么证据不够"，
+过了才能进下一步。这套判定纪律先于"Agent Harness""Guardrails"这些说法存在——
+行业最近才把这类"执行前拦一道"的做法归了类、起了名字，GateFix 是把一套原本就
+在真实压力下跑通了的纪律，正式接进这套命名体系，不是反过来先有了名字才去凑一个
+案例。
 
 ## 谁可以直接拿来用
 
@@ -95,8 +103,9 @@ Relevance/Coverage/Ordering/Robustness）、以及**谁最终对这个判定负�
 ### 不跟编排框架抢地盘（LangGraph / CrewAI / Relevance AI / Coze 这类）
 
 LangGraph 用图结构编排 state，CrewAI 用角色化 crew 分工，Relevance AI /
-Coze 这类无代码平台把编排包装成拖拽界面——它们负责"agent 怎么想、怎么调
-工具、怎么协作"。GateFix 不做这些，也不是要跟它们竞争：它是"编排跑到
+Coze 这类无代码平台把编排包装成拖拽界面——这些做的是 agent harness 里
+"编排/工具"那一层，负责 agent 怎么想、怎么调工具、怎么协作。GateFix 不做
+这些，也不是要跟它们竞争：它是 harness 里的 **Guardrails** 层——"编排跑到
 关键动作前，要不要放行"这一层判定，设计上就是要接进别人的编排循环，不是
 自己再造一个。已验证的接入方式：MCP tool（任何支持 MCP 协议的 client）、
 LangGraph StateGraph 节点（见下文"三种代码级接入方式"）。
