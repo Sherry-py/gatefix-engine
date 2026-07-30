@@ -8,9 +8,9 @@
 </defs>
 <rect x="0" y="0" width="1500" height="900" rx="0" fill="#FFFFFF" stroke="none" stroke-width="0"/>
 <text x="750.0" y="34" font-size="20" font-weight="700" fill="#2A2A28" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">最小内核：任何领域都长这样的 6 节点引擎骨架</text>
-<text x="750.0" y="56" font-size="12" font-weight="400" fill="#7A7A74" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">悉尼退租 / Agent支付 / 客服工单——节点数和边数不随任务变复杂而增加，变的只是每个节点背后的数据</text>
+<text x="750.0" y="56" font-size="12" font-weight="400" fill="#7A7A74" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">节点数和边数不随任务复杂度增加，变的只是每个节点背后的数据</text>
 <rect x="300" y="66" width="900" height="32" rx="8" fill="#FCEACB" stroke="#C9820A" stroke-width="1.6"/>
-<text x="750.0" y="87" font-size="13.5" font-weight="700" fill="#7A4A0A" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">核心不变式：Commit(a,E) = Human_Gate(a) ∧ ⋀ᵢ Pᵢ(E,θᵢ)　i∈{R,C,O,Ro}</text>
+<text x="750.0" y="87" font-size="13.5" font-weight="700" fill="#7A4A0A" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">形式化表达：Commit(a,E) = Human_Gate(a) ∧ ⋀ᵢ Pᵢ(E,θᵢ)　i∈{R,C,O,Ro}</text>
 <rect x="60" y="130" width="220" height="80" rx="12" fill="#FFFBEB" stroke="#E6D9A0" stroke-width="1.6"/>
 <text x="170.0" y="166.0" font-size="13.5" font-weight="700" fill="#8A7A2E" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">① 组装上下文</text>
 <text x="170.0" y="186.0" font-size="9.5" font-weight="400" fill="#6E6E68" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">本轮证据 + 节点图快照</text>
@@ -56,17 +56,18 @@
 <path d="M980 420 C1050 440, 1090 455, 1118 465" fill="none" stroke="#2F6B44" stroke-width="1.6"  marker-end="url(#arrGr)"/>
 <text x="1030" y="440" font-size="9.5" font-weight="400" fill="#2F6B44" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">执行结果</text>
 <path d="M1180 470 C1180 90, 400 40, 170 128" fill="none" stroke="#2F6B44" stroke-width="1.6" stroke-dasharray="8,5" marker-end="url(#arrGr)"/>
-<text x="750.0" y="116" font-size="11" font-weight="700" fill="#2F6B44" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">下一循环 —— 状态只因证据落地才翻转，不因宣称</text>
+<text x="750.0" y="116" font-size="11" font-weight="700" fill="#2F6B44" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">下一循环——状态因证据落地才翻转，不因宣称</text>
 <rect x="60" y="740" width="670" height="130" rx="12" fill="#F7F5EE" stroke="#DEDED8" stroke-width="1.6"/>
 <text x="80" y="766" font-size="13" font-weight="700" fill="#3A3A36" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">这张图为什么故意画得很小</text>
-<text x="80" y="790" font-size="10.5" font-weight="400" fill="#5C5C56" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">6个节点、约8条边——这是任何领域都不变的骨架。悉尼退租、agent支付、</text>
-<text x="80" y="808" font-size="10.5" font-weight="400" fill="#5C5C56" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">客服工单，走的都是这6步；边上标的是流动的数据（证据/分数/决策），</text>
-<text x="80" y="826" font-size="10.5" font-weight="400" fill="#5C5C56" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">不是叙事性的「然后」。任务变复杂，节点契约不变，只有数据变大变多。</text>
-<text x="80" y="848" font-size="10" font-weight="400" fill="#8A8A84" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">对应 Graph Engineering：节点=有界任务，边=数据契约，图的拓扑不随复杂度膨胀</text>
+<text x="80" y="786" font-size="10.5" font-weight="400" fill="#5C5C56" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">6 个节点、约 8 条边——任何领域都是这个骨架（悉尼退租/Agent支付/客服工单）。</text>
+<text x="80" y="802" font-size="10.5" font-weight="400" fill="#5C5C56" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">边上标的是流动数据（证据/分数/决策），不是叙事「然后」。</text>
+<text x="80" y="818" font-size="10.5" font-weight="400" fill="#5C5C56" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">任务变复杂，节点契约不变，只是数据变大变多。</text>
+<text x="80" y="834" font-size="10" font-weight="400" fill="#8A8A84" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">对应 Graph Engineering：节点=有界任务，边=数据契约，拓扑不随复杂度膨胀</text>
+<text x="80" y="852" font-size="10" font-weight="400" fill="#8A8A84" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">不含 BYPASS_TO_HUMAN 人情类分支（跳过整条链），见 decision_chain.svg</text>
 <rect x="770" y="740" width="670" height="130" rx="12" fill="#FDF3E3" stroke="#D9A441" stroke-width="1.6"/>
 <text x="790" y="766" font-size="13" font-weight="700" fill="#8A5A1E" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">怎么读这张图（写给非技术读者）</text>
-<text x="790" y="790" font-size="10.5" font-weight="400" fill="#6B5410" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">6个方框＝6个动作节点，箭头＝证据和决定在节点之间怎么流动。</text>
-<text x="790" y="808" font-size="10.5" font-weight="400" fill="#6B5410" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">绿色（PASS）＝证据够，直接放行；蓝色（ESCALATE）＝证据不够，</text>
-<text x="790" y="826" font-size="10.5" font-weight="400" fill="#6B5410" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">必须叫人拍板；橙色虚线（AUTO_REPAIR）＝有缺口但能自动补一次证据。</text>
-<text x="790" y="848" font-size="10" font-weight="700" fill="#8A5A1E" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">机器不会替人「决定」，它只负责判断这件事够不够格自己往下做</text>
+<text x="790" y="790" font-size="10.5" font-weight="400" fill="#6B5410" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">方框＝动作节点，箭头＝证据和决定的流向。</text>
+<text x="790" y="808" font-size="10.5" font-weight="400" fill="#6B5410" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">绿色 PASS＝证据够直接放行；蓝色 ESCALATE＝证据不够转人工；</text>
+<text x="790" y="826" font-size="10.5" font-weight="400" fill="#6B5410" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">橙色虚线 AUTO_REPAIR＝有缺口但能自动补一次证据。</text>
+<text x="790" y="848" font-size="10" font-weight="700" fill="#8A5A1E" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">机器只判断"够不够格自己往下做"，不替人「决定」</text>
 </svg>
