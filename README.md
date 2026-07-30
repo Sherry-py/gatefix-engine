@@ -1,4 +1,4 @@
-# GateFix Demo —— 悉尼远程退租案例的最小可运行实现
+# GateFix —— AI Agent 执行前授权闸门（悉尼真实案例验证）
 
 [![CI](https://github.com/Sherry-py/gatefix-engine/actions/workflows/ci.yml/badge.svg)](https://github.com/Sherry-py/gatefix-engine/actions/workflows/ci.yml)
 
