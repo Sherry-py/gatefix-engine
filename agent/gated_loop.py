@@ -1,30 +1,26 @@
 """
-agent/gated_loop.py —— 把 gate.py 的三态路由嵌进一个 agent loop：每一步
-reason → gate → (只有 PASS 才) act，非 PASS 结果绝不放行 tool_fn。
+agent/gated_loop.py —— 把 gate.py 的三态路由嵌进一个 agent loop：
+reason → gate → (仅 PASS) act。
 
-这个模块复用 gate.py 的 GateConfig（真实的 4D-CQ 判定公式）以及
-preconditions/<case>.py 里已有的 REGISTRY / REPAIR_REGISTRY（真实的打分
-与补证函数）——不引入任何新的判定逻辑。也不引入任何真实模型/LLM 调用：
-本仓库设计上是 LLM-free 的确定性 demo（见 README「no LLM call needed」），
-这条不变。tool_fn 的返回值里那个整数是抽象的 action-cost 单位，不是
-LLM token 计数——这个仓库测不了 token 成本，就不假装测了。
+复用 gate.py 的 GateConfig 和 preconditions/<case>.py 的
+REGISTRY/REPAIR_REGISTRY，不引入新的判定逻辑，也不调用任何模型/LLM——
+本仓库设计上是 LLM-free 的确定性 demo（见 README「no LLM call needed」）。
+tool_fn 返回的整数是抽象 action-cost 单位，不是 LLM token 计数——这个仓库
+测不了 token 成本，不假装测。
 
-Route → 二元映射（不新增 REFUSE verdict，复用 gate.py 真实的 route 词汇表）：
+Route → 二元映射（不新增 REFUSE，复用 gate.py 的 route 词汇表）：
     PASS                        → 放行，tool_fn 执行
     ESCALATE / BYPASS_TO_HUMAN  → 阻断，tool_fn 绝不执行
-    AUTO_REPAIR                 → 不对外暴露。engine.py 证明这是"补证据后
-                                  重新判定"的真实重试循环（见 run_case 里
-                                  的 while True + REPAIR_REGISTRY + k_dry），
-                                  所以 make_case_gate_fn 在适配层内部原样
-                                  复刻这个重试循环，直到收敛成 PASS /
-                                  ESCALATE 再返回——GatedAgentLoop 本身永远
-                                  只看到"放行 / 阻断"两态，和 engine.py 的
-                                  行为完全一致。
+    AUTO_REPAIR                 → 不对外暴露。engine.py::run_case 证明这是
+                                  "补证据后重新判定"的真实重试循环
+                                  （while True + REPAIR_REGISTRY + k_dry），
+                                  make_case_gate_fn 在适配层内部原样复刻，
+                                  直到收敛成 PASS/ESCALATE 才返回。
 
-没有 CLARIFY 这一态，也没有"非 PASS 但仍放行"的旁路开关：真实 gate.py 的
-route() 只产出 PASS / AUTO_REPAIR / ESCALATE，engine.py 另外加了
-BYPASS_TO_HUMAN（人情类证据，不进入四维打分）。凡是收敛结果不是 PASS，
-tool_fn 就不会被调用——这是这个模块唯一的契约，不可配置、不可放宽。
+没有 CLARIFY 态，也没有"非 PASS 但仍放行"的旁路开关：gate.py::route() 只
+产出 PASS/AUTO_REPAIR/ESCALATE，engine.py 另加 BYPASS_TO_HUMAN（人情类
+证据）。非 PASS 时 tool_fn 绝不会被调用——这是这个模块唯一的契约，不可
+配置、不可放宽。
 """
 
 from __future__ import annotations
