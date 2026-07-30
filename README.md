@@ -1,4 +1,4 @@
-# GateFix —— 从真实业务流程提炼的确定性执行前授权方法论（Agent Harness 里的 Guardrails 层）
+# GateFix：亲历真实案例逼出的 Agent Guardrails
 
 [![CI](https://github.com/Sherry-py/gatefix-engine/actions/workflows/ci.yml/badge.svg)](https://github.com/Sherry-py/gatefix-engine/actions/workflows/ci.yml)
 
