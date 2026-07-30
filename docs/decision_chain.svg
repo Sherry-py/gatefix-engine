@@ -1,0 +1,115 @@
+<svg viewBox="0 0 1200 1250" xmlns="http://www.w3.org/2000/svg" role="img">
+<title>Harness = 反向可逆性判定 + 证据质量判定 + 人机授权——判定链与真实实现</title>
+<desc>顶部是这套方法论的形式化表达 Commit(a,E) = Human_Gate(a) ∧ ⋀Pᵢ(E,θᵢ)；中段判定链依次为动作分类、可逆性判定 is_commit、证据质量判定 Pᵢ/4D-CQ、人机授权 Human_Gate；底部为完整四态 route 判定式，以及三层真实实现共用同一套判定代码的说明。</desc>
+<defs>
+<marker id="dc-arrM" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6B6B68"/></marker>
+<marker id="dc-arrBl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#4C89C8"/></marker>
+</defs>
+<rect x="0" y="0" width="1200" height="1250" fill="#FFFFFF" stroke="none"/>
+
+<!-- Title: harness = A + B + C, stated directly -->
+<text x="600" y="30" font-size="19" font-weight="700" fill="#2A2A28" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">Harness = 何时必须停 + 停下来看什么 + 谁来拍板</text>
+<text x="600" y="50" font-size="11" font-weight="400" fill="#7A7A74" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">My Harness = When to Stop + What to Check + Who Decides —— 判定链与真实代码实现 / a methodology mapped to running code</text>
+
+<!-- Formal expression banner (no "invariant/original" labeling) -->
+<rect x="60" y="68" width="1080" height="64" rx="10" fill="#FCEACB" stroke="#C9820A" stroke-width="1.8"/>
+<text x="600" y="96" font-size="14.5" font-weight="700" fill="#7A4A0A" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">形式化表达 / Formal Expression：Commit(a,E) = Human_Gate(a) ∧ ⋀ᵢ Pᵢ(E,θᵢ)　i∈{R,C,O,Ro}</text>
+<text x="600" y="118" font-size="10.5" font-weight="400" fill="#8A6A1E" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">下面三个节点分别是这套方法论的一个组成部分，全部是可运行代码 / each node below is one component, all running code</text>
+
+<path d="M600 132 L600 168" fill="none" stroke="#6B6B68" stroke-width="1.6" marker-end="url(#dc-arrM)"/>
+
+<!-- Action classification branch node -->
+<rect x="430" y="170" width="340" height="66" rx="12" fill="#F7F5EE" stroke="#B8B8AE" stroke-width="1.6"/>
+<text x="600" y="198" font-size="13.5" font-weight="700" fill="#3A3A36" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">动作分类 / Action Classification</text>
+<text x="600" y="218" font-size="9.5" font-weight="400" fill="#6E6E68" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">commit.bypass_to_human ？</text>
+<text x="790" y="203" font-size="9" font-weight="400" fill="#9A9A92" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">→ mcp_server/server.py 分支①</text>
+
+<!-- Bypass side box -->
+<path d="M430 214 C300 230, 220 250, 190 270" fill="none" stroke="#8A8A84" stroke-width="1.5" stroke-dasharray="5,4" marker-end="url(#dc-arrM)"/>
+<rect x="70" y="272" width="250" height="86" rx="12" fill="#F7F5EE" stroke="#B8B8AE" stroke-width="1.6"/>
+<text x="195" y="300" font-size="12.5" font-weight="700" fill="#5C5C56" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">人情类证据</text>
+<text x="195" y="316" font-size="10" font-weight="400" fill="#5C5C56" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">Human-relational evidence</text>
+<text x="195" y="334" font-size="9" font-weight="400" fill="#8A8A84" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">不进入四维打分 / never enters 4D scoring</text>
+<text x="195" y="350" font-size="8.5" font-weight="400" fill="#9A9A92" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">例：对朋友补偿支付 friend_compensation</text>
+
+<!-- main path down -->
+<path d="M600 236 L600 288" fill="none" stroke="#6B6B68" stroke-width="1.6" marker-end="url(#dc-arrM)"/>
+
+<!-- Component 1: is_commit -->
+<rect x="430" y="290" width="340" height="112" rx="12" fill="#F1EEFB" stroke="#7B6CC8" stroke-width="1.8"/>
+<rect x="446" y="302" width="70" height="22" rx="11" fill="#FFFFFF" stroke="#7B6CC8" stroke-width="1.2"/>
+<text x="481" y="317" font-size="9.5" font-weight="700" fill="#4E4390" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">组成 ①</text>
+<text x="620" y="317" font-size="13.5" font-weight="700" fill="#4E4390" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">is_commit(a) 可逆性判定</text>
+<text x="600" y="338" font-size="10" font-weight="400" fill="#4E4390" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">从必须承担的不可逆代价反推，找出所有需要闸门的动作点</text>
+<text x="600" y="354" font-size="9.5" font-weight="400" fill="#4E4390" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">derives every gated action point by working backward from irreversible cost</text>
+<text x="600" y="378" font-size="9.5" font-weight="400" fill="#5C4F9E" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">IsCommit(a) = [Cost_reverse=∞] ∨ [Cost_reverse&gt;λ·Value(a)]</text>
+<text x="790" y="352" font-size="9" font-weight="400" fill="#9A9A92" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">→ gate.py::is_commit()</text>
+
+<path d="M600 402 L600 442" fill="none" stroke="#6B6B68" stroke-width="1.6" marker-end="url(#dc-arrM)"/>
+
+<!-- Component 2: Pi scoring -->
+<rect x="430" y="444" width="340" height="112" rx="12" fill="#FDECEE" stroke="#CE5560" stroke-width="1.8"/>
+<rect x="446" y="456" width="70" height="22" rx="11" fill="#FFFFFF" stroke="#CE5560" stroke-width="1.2"/>
+<text x="481" y="471" font-size="9.5" font-weight="700" fill="#A03B45" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">组成 ②</text>
+<text x="628" y="471" font-size="13.5" font-weight="700" fill="#A03B45" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">Pᵢ(E,θᵢ) 证据质量判定</text>
+<text x="600" y="491" font-size="10" font-weight="400" fill="#6E6E68" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">R/C/O/Ro 四维，确定性代码执行，不是 LLM 判断</text>
+<text x="600" y="510" font-size="9.5" font-weight="400" fill="#A03B45" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">Q(a,E) = w_R·R + w_C·C + w_O·O + w_Ro·Ro</text>
+<text x="600" y="532" font-size="8.5" font-weight="400" fill="#B96570" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">7 个打分函数按 case 动态加载 / 7 scoring fns loaded dynamically per case</text>
+<text x="790" y="494" font-size="9" font-weight="400" fill="#9A9A92" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">→ preconditions/&lt;case&gt;.py::REGISTRY</text>
+
+<path d="M600 556 L600 596" fill="none" stroke="#6B6B68" stroke-width="1.6" marker-end="url(#dc-arrM)"/>
+
+<!-- Component 3: Human_Gate -->
+<rect x="430" y="598" width="340" height="130" rx="12" fill="#E5F0FA" stroke="#4C89C8" stroke-width="1.8"/>
+<rect x="446" y="610" width="70" height="22" rx="11" fill="#FFFFFF" stroke="#4C89C8" stroke-width="1.2"/>
+<text x="481" y="625" font-size="9.5" font-weight="700" fill="#2F5E8C" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">组成 ③</text>
+<text x="628" y="625" font-size="13.5" font-weight="700" fill="#2F5E8C" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">Human_Gate(a) 人机授权</text>
+<text x="600" y="645" font-size="10" font-weight="400" fill="#2F5E8C" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">人是否已批准这个动作——独立于证据打分之外的判定项</text>
+<text x="600" y="661" font-size="9.5" font-weight="400" fill="#2F5E8C" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">whether a human has approved — independent of evidence scoring</text>
+<text x="600" y="679" font-size="9.5" font-weight="400" fill="#2F5E8C" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">LoopMode(a)=IN_THE_LOOP 时必经</text>
+<text x="600" y="693" font-size="8.3" font-weight="400" fill="#2F5E8C" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">required whenever LoopMode(a)=IN_THE_LOOP</text>
+<text x="600" y="709" font-size="8.3" font-weight="400" fill="#5C86AE" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">决定权不默认交给模型 / authority never defaults to the model</text>
+<text x="600" y="723" font-size="9.5" font-weight="400" fill="#2F5E8C" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">Human_Gate(a) ∈ {True, False}</text>
+<text x="790" y="660" font-size="9" font-weight="400" fill="#9A9A92" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">→ engine.py ESCALATE / BYPASS_TO_HUMAN 分支</text>
+
+<!-- bypass box connects into Human_Gate (blue now, matches Human_Gate box) -->
+<path d="M320 340 C400 420, 380 570, 428 655" fill="none" stroke="#4C89C8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#dc-arrBl)"/>
+<text x="373" y="600" font-size="8.5" font-weight="400" fill="#4C89C8" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">跳过 Pᵢ</text>
+<text x="373" y="613" font-size="8.5" font-weight="400" fill="#7AA5CC" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">→ Human_Gate</text>
+
+<path d="M600 728 L600 766" fill="none" stroke="#6B6B68" stroke-width="1.6" marker-end="url(#dc-arrM)"/>
+
+<!-- Combine node -->
+<rect x="430" y="768" width="340" height="70" rx="12" fill="#EAF6EE" stroke="#4E9B66" stroke-width="1.8"/>
+<text x="600" y="796" font-size="13" font-weight="700" fill="#2F6B44" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">Commit(a,E) 判定结果 · Final Determination</text>
+<text x="600" y="816" font-size="10.5" font-weight="400" fill="#2F6B44" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">= Human_Gate(a) ∧ ⋀ᵢ Pᵢ(E,θᵢ)</text>
+
+<path d="M600 838 L600 874" fill="none" stroke="#6B6B68" stroke-width="1.6" marker-end="url(#dc-arrM)"/>
+
+<!-- Bottom: complete four-state route formula panel -->
+<rect x="60" y="876" width="1080" height="256" rx="12" fill="#FBFBF9" stroke="#DEDED8" stroke-width="1.6"/>
+<text x="600" y="904" font-size="14.5" font-weight="700" fill="#2A2A28" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">四态 Route 完整判定式 · Complete Four-State Route Formula</text>
+
+<rect x="88" y="918" width="1024" height="46" rx="8" fill="#EAF6EE" stroke="#4E9B66" stroke-width="1.4"/>
+<text x="108" y="946" font-size="11.5" font-weight="700" fill="#2F6B44" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">PASS</text>
+<text x="185" y="946" font-size="10.5" font-weight="400" fill="#2F6B44" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">Q(a,E) ≥ τ_pass —— 全自主放行 / fully autonomous</text>
+
+<rect x="88" y="972" width="1024" height="46" rx="8" fill="#FFF3E4" stroke="#D98E3F" stroke-width="1.4" stroke-dasharray="6,4"/>
+<text x="108" y="1000" font-size="11.5" font-weight="700" fill="#8A5A1E" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">AUTO_REPAIR</text>
+<text x="255" y="1000" font-size="10.5" font-weight="400" fill="#8A5A1E" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">τ_repair ≤ Q &lt; τ_pass ∧ verifiable_ext ∧ dry_rounds &lt; k_dry —— 内部收敛，不对外暴露为终态</text>
+
+<rect x="88" y="1026" width="1024" height="46" rx="8" fill="#E5F0FA" stroke="#4C89C8" stroke-width="1.4"/>
+<text x="108" y="1054" font-size="11.5" font-weight="700" fill="#2F5E8C" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">ESCALATE</text>
+<text x="225" y="1054" font-size="10.5" font-weight="400" fill="#2F5E8C" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">¬verifiable_ext ∨ dry_rounds≥k_dry ∨ Q&lt;τ_repair —— 转入 Human_Gate 人工终审</text>
+
+<rect x="88" y="1080" width="1024" height="46" rx="8" fill="#F1EEFB" stroke="#7B6CC8" stroke-width="1.6"/>
+<text x="108" y="1108" font-size="11.5" font-weight="700" fill="#4E4390" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">BYPASS_TO_HUMAN</text>
+<text x="290" y="1108" font-size="10.5" font-weight="400" fill="#4E4390" text-anchor="start" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">commit.bypass_to_human=True，跳过 Pᵢ —— 人情类证据机器不可组装</text>
+
+<!-- Closing note: already engineered / already practiced -->
+<rect x="60" y="1146" width="1080" height="66" rx="10" fill="#F7F5EE" stroke="#B8B8AE" stroke-width="1.6"/>
+<text x="600" y="1170" font-size="11.5" font-weight="700" fill="#3A3A36" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">已落地 / Already Implemented：CLI 一次性判定(engine.py) → agent loop 逐步授权(gated_loop.py) → MCP server 判活证据(mcp_server/server.py)</text>
+<text x="600" y="1188" font-size="10" font-weight="400" fill="#6E6E68" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">三层部署形态共用同一份 resolve_precondition()，不是三份平行实现 / all three call the same resolve_precondition(), not parallel copies</text>
+
+<text x="600" y="1236" font-size="9.5" font-weight="400" fill="#9A9A92" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">第二张（即将呈现）：四态自主度谱系 + 领域无关引擎／领域相关配置分层带 · Chart 2: autonomy spectrum + engine/config layering</text>
+</svg>

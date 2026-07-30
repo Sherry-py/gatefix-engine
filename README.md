@@ -37,11 +37,34 @@ Rosebery 公寓远程退租真实发生过的事——包括案例后期新增�
 ③Precondition 判定对应 `preconditions/sydney_move.py` 里的打分函数，④三态路由对应 `gate.py` 里的
 `GateConfig.route()`，⑤a/⑤b 对应 `engine.py` 里 AUTO_REPAIR 循环和 ESCALATE/BYPASS_TO_HUMAN 分支。
 
+下面两张图从另外两个角度拆开看同一套系统：判定链具体怎么走一遍，以及工程上怎么落地。
+
+### 判定链：Harness = 何时必须停 + 停下来看什么 + 谁来拍板
+
+![GateFix decision chain — formal expression, three components, complete four-state route formula](docs/decision_chain.svg)
+
+顶部是这套方法论的形式化表达 `Commit(a,E) = Human_Gate(a) ∧ ⋀ᵢ Pᵢ(E,θᵢ)`；中段判定链依次是
+`is_commit(a)`（从不可逆代价反推需要闸门的动作点，对应 `gate.py::is_commit()`）、`Pᵢ(E,θᵢ)`
+（4D-CQ 证据质量判定，对应 `preconditions/<case>.py::REGISTRY`）、`Human_Gate(a)`（人机授权布尔量，
+对应 `engine.py` 里 ESCALATE/BYPASS_TO_HUMAN 分支）；底部是完整的四态 route 判定式。每个节点右侧
+都标了对应的代码位置——这是一条可以对着真实代码逐节点讲下去的判定链，不是纯理论图。
+
+### 四态自主度谱系 + 领域无关引擎/领域相关配置分层带
+
+![GateFix autonomy spectrum and engine/config layering](docs/autonomy_layering.svg)
+
+上半部分把 PASS / AUTO_REPAIR / ESCALATE / BYPASS_TO_HUMAN 排成一条自主度递减、人工介入递增的
+谱系；下半部分展示"领域无关引擎"（`gate.py` + `engine.py`，任何场景都不改这两个文件）和"领域相关
+配置"（`commits` / `bindings` / `evidence` / `preconditions` 四份文件，换场景就换这几处）之间的
+分层关系——这是对"能不能落地"这个问题最直接的证据。图里也如实标注了：目前只有 `sydney_move` 一个
+场景真实跑通过，"换场景不用改引擎"是架构设计意图，还没有被第二个真实场景验证过。
+
 ## 这个项目证明什么
 
 GateFix 的核心主张是：agent 能不能自主执行一个动作，不该由"有没有一个确认按钮"决定，
-而该由这个动作的**可逆性**、**证据是否覆盖四个维度（Relevance/Coverage/Ordering/Robustness）**、
-以及**残余的外部风险**共同决定。这份代码把这套判定逻辑做成了四份按 `--case` 动态加载的
+而该由这个动作**什么时候必须停**（可逆性）、**停下来该看什么证据**（证据是否覆盖四个维度
+Relevance/Coverage/Ordering/Robustness）、以及**谁最终对这个判定负责**（Human_Gate 人机授权）
+共同决定，此外还要单独核算**残余的外部风险**。这份代码把这套判定逻辑做成了四份按 `--case` 动态加载的
 可替换配置（`commits/<case>_commits.yaml` / `bindings/<case>_bindings.yaml` /
 `evidence/<case>_evidence.yaml` / `preconditions/<case>.py`）+ 一个不含场景特定逻辑的引擎
 （`gate.py` + `engine.py`，靠 `importlib` 按 case 名动态导入打分函数）。
