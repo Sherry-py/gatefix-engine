@@ -1,4 +1,4 @@
-# GateFix —— AI Agent 执行前授权闸门（悉尼真实案例验证）
+# GateFix —— AI Agent 执行前授权闸门（判定引擎用真实退租案例验证）
 
 [![CI](https://github.com/Sherry-py/gatefix-engine/actions/workflows/ci.yml/badge.svg)](https://github.com/Sherry-py/gatefix-engine/actions/workflows/ci.yml)
 
@@ -27,6 +27,11 @@ point.
 Rosebery 公寓远程退租真实发生过的事——包括案例后期新增的空运纸箱加固决策和关税不确定性。
 代码跑的是真实数据，不是虚构 case。第三方（中介、楼管、货代等）的姓名已替换为身份角色标注，
 金额与事实细节保留真实。
+
+**如实说明**：案例里的动作是真人（委托人）当时做出的真实决策，原始事件里没有 AI agent。
+这份代码把这些决策当作 agent 的候选动作跑一遍判定引擎——这样做是因为引擎本身不关心
+"谁提的动作"，只关心"证据够不够格"；用真实决策喂真实证据，验证的正是这个不关心提案
+来源的判定核心在真实场景里站不站得住。
 
 ## 谁可以直接拿来用
 
