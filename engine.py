@@ -28,19 +28,16 @@ BASE_DIR = Path(__file__).parent
 
 
 def _resolve_regular_commit(config, score_fn, repair_fn, evidence, verbose=False):
-    """常规 commit 的三态路由 + AUTO_REPAIR 重试循环。从 run_case 里抽成独立
-    函数，一是让这段逻辑能在没有一整个 case 的 commits/evidence/preconditions
-    三份 yaml/py 文件的情况下被单测覆盖（构造一整个 case 只为测一个边界分支，
-    和"目前只有 sydney_move 一个真实场景"这条如实说明相冲突）；二是修一个真实
-    发现的缺口：route=="AUTO_REPAIR" 但这个 precondition_fn 没有在
-    REPAIR_REGISTRY 里注册补证函数时，原来的写法会让 AUTO_REPAIR 原样返回、
-    从不收敛——这不是一个合法终态（route 只能是 PASS 或 ESCALATE），
-    recorded sydney_move case 里凑巧没有任何这样的 commit 撞上这条路径，
-    所以一直没暴露；用真实但非案例内的 evidence 测试 MCP server 的
-    authorize() 时才发现。
+    """常规 commit 的三态路由 + AUTO_REPAIR 重试循环。从 run_case 抽成独立
+    函数：一是不用为了测一个边界分支就构造一整个 case 的三份 yaml/py；二是
+    修一个真实缺口——route=="AUTO_REPAIR" 但该 precondition_fn 没注册
+    REPAIR_REGISTRY 补证函数时，原写法会让 AUTO_REPAIR 原样返回、从不收敛
+    （route 只能是 PASS 或 ESCALATE，这不是合法终态）。sydney_move 案例里
+    没有 commit 撞上这条路径，直到用真实但非案例内的 evidence 测 MCP
+    server 的 authorize() 才发现。
 
-    返回 (route, result, Q, dry_rounds, repair_attempts)。route 只会是
-    PASS 或 ESCALATE 之一。"""
+    返回 (route, result, Q, dry_rounds, repair_attempts)，route 只会是
+    PASS 或 ESCALATE。"""
     dry_rounds = 0
     repair_attempts = 0
     while True:

@@ -1,31 +1,24 @@
 """
-agent/langgraph_loop.py —— 用 LangGraph 的 StateGraph 重新表达同一套
-reason → gate → act 编排，作为 gatefix-engine 的第四种部署形态（CLI /
-agent/gated_loop.py::GatedAgentLoop / mcp_server/server.py 之后）。
-
-不引入任何新的判定逻辑：gate 节点直接调用
-agent/gated_loop.py::resolve_precondition()——和 CLI、GatedAgentLoop、MCP
-server 用的是同一个函数。这个文件只换了一层编排壳。
+agent/langgraph_loop.py —— GateFix 的第四种部署形态（CLI /
+agent/gated_loop.py::GatedAgentLoop / mcp_server/server.py 之后），用
+LangGraph 的 StateGraph 表达 reason → gate → act。gate 节点直接调用
+agent/gated_loop.py::resolve_precondition()——和其余三种形态共用同一个
+函数，不引入新的判定逻辑。
 
 四个节点：
-    planner       按 commits.yaml 声明的顺序，取出下一个待授权的 commit
-                  （和 gated_loop.py::make_case_reason_fn 一样，是最小实现，
-                  不是真 planner——本仓库没有真正的推理/规划步骤，见该模块
-                  docstring）。
-    gate          真实判定：bypass_to_human 的 commit 直接判 BYPASS_TO_HUMAN，
-                  其余调 resolve_precondition()（AUTO_REPAIR 在内部收敛，
-                  外部只看到 PASS 或非 PASS）。
-    executor      只有 route == "PASS" 才会被调用，记录"已执行"。
-    human_review  route != "PASS" 时进入，调用 LangGraph 的 interrupt() 真正
-                  暂停图执行，等待外部通过 Command(resume=...) 恢复。这是这
-                  层编排壳相对 GatedAgentLoop 多出来的能力：GatedAgentLoop
-                  遇到非 PASS 直接 return，这里是可恢复的暂停，不是终止。
+    planner       按 commits.yaml 顺序取出下一个待授权的 commit（和
+                  make_case_reason_fn 一样是最小实现，不是真 planner）。
+    gate          bypass_to_human 直接判 BYPASS_TO_HUMAN，其余调
+                  resolve_precondition()，AUTO_REPAIR 在内部收敛。
+    executor      仅 route == "PASS" 时执行。
+    human_review  route != "PASS" 时进入，用 interrupt()/Command(resume=...)
+                  暂停并等待恢复——GatedAgentLoop 遇到非 PASS 是直接
+                  return，这里是可恢复的暂停。
 
-    重要边界：human_review 恢复后只是把人类的回复记录进 processed 历史，
-    不会把这个回复当成"批准"去改判定结果或调用 executor——route != PASS
-    时 executor 绝不会被调用，这个契约和 GatedAgentLoop 完全一样，不因为
-    多了 interrupt/resume 就出现"人一说话就放行"的旁路。真正要把 ESCALATE
-    翻成 PASS，只能是补齐证据后重新走一次 gate 判定，不是在这里加特权。
+    resume 收到的回复只记录进 processed，不会当成批准去调用 executor：
+    route != PASS 时 executor 绝不会被调用，这个契约不因为加了
+    interrupt/resume 而松动；把 ESCALATE 变成 PASS 只能靠补齐证据后
+    重新走一次 gate 判定。
 """
 
 from __future__ import annotations

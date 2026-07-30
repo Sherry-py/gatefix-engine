@@ -13,20 +13,17 @@ mcp_server/server.py —— 把 GateFix 的 4D-CQ gate 包成一个 MCP server�
     route 只会是 PASS / ESCALATE / BYPASS_TO_HUMAN 之一。
 
 这是"活证据"版本，不是案例回放：evidence 由调用方（任何 MCP client）在每
-次调用时提供，不读 evidence/sydney_move_evidence.yaml 里的静态案例数据。
-这让它成为一个真的可以挡在别的 agent 动作前面的 gate——只要那个动作的
-证据形状匹配 preconditions/sydney_move.py 里某个已有的打分函数。这也是它
-现在的边界：只认得 sydney_move 这 7 个打分函数期望的 evidence 字段，不是
-一个能判断任意领域动作的通用 gate。
+次调用时提供，不读 evidence/sydney_move_evidence.yaml 里的静态数据，所以
+能真的挡在别的 agent 动作前面——前提是那个动作的证据形状匹配
+preconditions/sydney_move.py 里某个已有的打分函数；只认得这 7 个，不是
+能判断任意领域动作的通用 gate。
 
-friend_compensation 这类 bypass_to_human 的 commit 没有 precondition_fn
-（人情类证据机器不可组装，见 commits/sydney_move_commits.yaml），所以它
+bypass_to_human 的 commit（如 friend_compensation）没有 precondition_fn，
 不会出现在 list_precondition_functions 里，也没法通过 authorize() 判定——
-这是有意的：这类动作本来就该直接交给人，不该假装能被 evidence-based gate
-自动判定。
+人情类证据本来就该直接交给人，不该假装能被 evidence-based gate 自动判定。
 
-仍然是 LLM-free、确定性：这个 server 不调用任何模型/外部 API，判定过程
-和 CLI/agent loop 完全一样可审计、可复现。
+仍然是 LLM-free、确定性：不调用任何模型/外部 API，判定过程和 CLI/agent
+loop 完全一样可审计、可复现。
 """
 
 from __future__ import annotations

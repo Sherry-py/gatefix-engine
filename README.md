@@ -56,8 +56,7 @@ Rosebery 公寓远程退租真实发生过的事——包括案例后期新增�
 上半部分把 PASS / AUTO_REPAIR / ESCALATE / BYPASS_TO_HUMAN 排成一条自主度递减、人工介入递增的
 谱系；下半部分展示"领域无关引擎"（`gate.py` + `engine.py`，任何场景都不改这两个文件）和"领域相关
 配置"（`commits` / `bindings` / `evidence` / `preconditions` 四份文件，换场景就换这几处）之间的
-分层关系——这是对"能不能落地"这个问题最直接的证据。图里也如实标注了：目前只有 `sydney_move` 一个
-场景真实跑通过，"换场景不用改引擎"是架构设计意图，还没有被第二个真实场景验证过。
+分层关系——这是对"能不能落地"这个问题最直接的证据（单场景验证现状见下节）。
 
 ## 这个项目证明什么
 
@@ -119,8 +118,7 @@ route 结果跟本 README 里描述的完全一致。改了 `commits/sydney_move
 
 上面跑的是"一次性判一个 case"。`agent/gated_loop.py` 把同一套 gate 判定嵌进一个
 显式的 reason → gate → act 循环，演示"每一步动作执行前先授权"这个更贴近真实
-agent 部署形态的用法——**复用的是同一个 `gate.py`/`preconditions/sydney_move.py`，
-不是另一套判定逻辑**。
+agent 部署形态的用法。
 
 ```bash
 python agent/gated_loop.py --case=sydney_move
@@ -138,9 +136,9 @@ PASS（`key_to_agent` 内部真实走了一轮 AUTO_REPAIR 才收敛到 PASS）�
 - **没有新的判定逻辑**：`agent/gated_loop.py` 里的 `make_case_gate_fn` 是
   `engine.py::run_case` 那套三态路由 + AUTO_REPAIR 重试循环的原样复刻，读的
   是同一份 `commits/bindings/evidence/preconditions` 配置。
-- **仍然是 LLM-free**：`tool_fn` 不调用任何真实模型/工具 API——这个仓库设计上
-  没有这样的组件（见开头 TL;DR）。它记录的 cost 是抽象 action-cost 单位，不是
-  LLM token；本仓库测不了 token 成本，就不写"token 成本"这个说法。
+- **仍然是 LLM-free**：`tool_fn` 不调用任何真实模型/工具 API（见开头 TL;DR）。
+  记录的 cost 是抽象 action-cost 单位，不是 LLM token——这个仓库测不了 token
+  成本，不假装测。
 - **`reason_fn` 是最小实现，不是 planner**：本仓库没有真正的推理/规划步骤，
   `make_case_reason_fn` 只是按 commits.yaml 声明的顺序逐个产出下一个待授权动作。
 - 单元测试见 `tests/test_gated_loop.py`：一部分用手写的假 gate_fn/tool_fn 测
@@ -184,10 +182,9 @@ python mcp_server/server.py   # stdio transport，接入任何 MCP client 的方
   `precondition_fn`**，不会出现在 `list_precondition_functions` 里，也没法
   通过 `authorize()` 判定——这是有意的：人情类证据本来就该直接交给人，不该
   假装能被 evidence-based gate 自动判定。
-- **判定逻辑和 CLI/agent loop 是同一份代码**：`mcp_server/server.py` 调用的
-  是 `agent/gated_loop.py` 里的 `resolve_precondition()`（三态路由 +
-  AUTO_REPAIR 重试循环 + soft_commit 分支的共享实现，`make_case_gate_fn` 也
-  调它），不是另外写的一套判定。
+- **和 CLI/agent loop 共用判定逻辑**：调用的是 `agent/gated_loop.py` 里的
+  `resolve_precondition()`（三态路由 + AUTO_REPAIR + soft_commit 的共享
+  实现，`make_case_gate_fn` 也调它）。
 - **仍然 LLM-free**：这个 server 不调用任何模型/外部 API。
 - 测试见 `tests/test_mcp_server.py`：`@mcp.tool()` 装饰器不改变函数本身
   （直接调用 `authorize(...)` 即可，不需要起 MCP 协议/transport），断言覆盖
@@ -196,12 +193,11 @@ python mcp_server/server.py   # stdio transport，接入任何 MCP client 的方
 
 ## LangGraph StateGraph —— 第四种部署形态
 
-`agent/langgraph_loop.py` 把同一套 reason → gate → act 编排换成 LangGraph 的
-`StateGraph` 来表达：`planner` → `gate` → `executor`（仅 route=="PASS" 时进入）
-/ `human_review`（非 PASS 时进入）。`gate` 节点直接调用
+用 LangGraph 的 `StateGraph` 表达同一套 reason → gate → act：
+`planner` → `gate` → `executor`（仅 route=="PASS" 时进入）/ `human_review`
+（非 PASS 时进入）。`gate` 节点直接调用
 `agent/gated_loop.py::resolve_precondition()`——和 CLI、`GatedAgentLoop`、
-MCP server 用的是同一个函数，这个文件不引入任何新的判定逻辑，只是换了一层
-编排壳。
+MCP server 共用同一个函数。
 
 ```bash
 pip install "langgraph==1.2.10"   # 只有跑这个文件才需要，核心引擎依赖不变
@@ -270,9 +266,8 @@ python agent/langgraph_loop.py --case=sydney_move
 然后 `python engine.py run --case=<new_case>`。`engine.py` 用 `importlib` 按
 case 名动态加载这四处，不需要改 `engine.py` 里的任何一行。
 
-这是"引擎领域无关、配置领域相关"这条设计原则在代码里的落地方式，但目前
-只有 `sydney_move` 一个场景跑通过——这个说法描述的是架构能力，不是一个
-已经用多个场景验证过的复用性结论。
+这是"引擎领域无关、配置领域相关"这条设计原则的落地方式——描述的是架构能力，
+不是已用多个场景验证过的复用性结论（现状见上文"这个项目证明什么"）。
 
 ## 和 benchmark 类工作（如 WorkBuddy Bench）的关系
 
