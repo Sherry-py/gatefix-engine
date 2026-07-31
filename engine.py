@@ -138,13 +138,41 @@ def run_case(case: str, verbose: bool = False):
 
         # ---------- 分支 1：人情类，直接旁路给人 ----------
         if commit.get("bypass_to_human"):
-            print(f"  [旁路] {commit.get('bypass_reason')}")
-            print("  → 不进入 4D-CQ 计算，直接呈人定夺（Human_Gate(a) 定义域之外）")
+            notes = commit.get("bypass_reason", "")
+            # 有的 bypass_to_human commit 同时带 precondition_fn：不是走常规三态
+            # 路由（那是分支 3 的事），是一个独立的预检阶段——比如
+            # friend_compensation 现实里是"先承诺分账、后来分账落空改现金/实物
+            # 补偿"两阶段合成的一个 commit，承诺阶段有客观可查的可行性证据，
+            # 值得单独跑一次 expectation_gate 记录在案；但预检结果不会、也不能
+            # 决定最终路由——补偿这件事人情类证据机器不可组装，终态永远是
+            # BYPASS_TO_HUMAN（mcp_server/server.py 里专门测试保证这条不会被
+            # 外部 client 误当成"预检 PASS = 已授权"绕开）。
+            if commit.get("precondition_fn"):
+                score_fn = REGISTRY[commit["precondition_fn"]]
+                pre = score_fn(evidence)
+                pre_allowed = config.expectation_gate(
+                    pre.get("contains_promise", True),
+                    pre.get("has_feasibility_evidence", False),
+                )
+                pre_route = "PASS" if pre_allowed else "ESCALATE"
+                print(f"  [阶段一·承诺 expectation_gate] {pre['notes']}")
+                print(f"  Send(msg) 被允许={pre_allowed} → {pre_route}"
+                      "（仅记录，不影响最终 route——最终仍是 BYPASS_TO_HUMAN）")
+                stage_note = f"承诺阶段：{pre_route}——{pre['notes']}"
+                if evidence.get("actual_settlement_amount") is not None:
+                    stage_note += (
+                        f"；实付阶段：{evidence.get('actual_settlement_form', '')}结清 "
+                        f"¥{evidence['actual_settlement_amount']}"
+                        f"（{evidence.get('settlement_reason', '')}）"
+                    )
+                notes = f"{stage_note}　{notes}"
+            print(f"  [阶段二·旁路] {commit.get('bypass_reason')}")
+            print("  → 最终决定不进入 4D-CQ 计算，直接呈人定夺（Human_Gate(a) 定义域之外）")
             rec = GateRecord(
                 commit_id=cid, commit_name=name, R=0, C=0, O=0, Ro=0, Q=0,
                 route="BYPASS_TO_HUMAN", is_commit=is_commit, loop_mode=loop_mode,
                 verifiable_ext=False, dry_rounds=0,
-                notes=commit.get("bypass_reason", ""), bypassed_to_human=True,
+                notes=notes, bypassed_to_human=True,
             )
             records.append(rec)
             continue

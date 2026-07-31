@@ -121,9 +121,15 @@ def score_bond_claim(evidence: dict) -> dict:
 
 
 def score_expectation_setting(evidence: dict) -> dict:
-    """软 commit：不走 4D-CQ quality_score，走 gate.py 里的 expectation_gate。
-    这里仍返回 R/C/O/Ro 是为了保持接口一致、方便 engine.py 统一处理和记录，
-    但真正决定放行与否的是 contains_promise / has_feasibility_evidence 这两个布尔量。"""
+    """friend_compensation 这个 commit 的承诺阶段预检：不走 4D-CQ
+    quality_score，走 gate.py 里的 expectation_gate。这里仍返回 R/C/O/Ro
+    是为了保持接口一致、方便统一处理和记录，但真正决定这个预检自身
+    PASS/ESCALATE 的是 contains_promise / has_feasibility_evidence 这两个
+    布尔量。注意：这个函数不能独立决定 friend_compensation 的最终 route——
+    那个 commit 同时是 bypass_to_human，补偿阶段的最终决定永远要走人审，
+    这个预检结果只是给人看的参考（engine.py 分支 1 / gated_loop.py /
+    langgraph_loop.py 里都这样处理；mcp_server/server.py 也不会把这个函数
+    单独暴露成可 authorize() 的对象，见其 _case_precondition_index()）。"""
     has_evidence = bool(evidence.get("feasibility_probe_done")) and bool(evidence.get("feasibility_evidence"))
     R = 1.0 if has_evidence else 0.2
     C = O = Ro = 1.0

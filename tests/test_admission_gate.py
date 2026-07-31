@@ -192,7 +192,13 @@ def test_expectation_setting_supported_promise_is_allowed():
 
 # ---------- out of scope, by design ----------
 #
-# friend_compensation has bypass_to_human=True in commits/sydney_move_commits.yaml
-# and no precondition_fn at all — it never enters 4D-CQ scoring (see engine.py's
-# "分支 1" branch), so there is nothing here for an admission check to exercise.
-# That is the point of BYPASS_TO_HUMAN as a fourth outcome, not a gap in this file.
+# friend_compensation has bypass_to_human=True in commits/sydney_move_commits.yaml.
+# It DOES carry a precondition_fn (score_expectation_setting, tested above) — but
+# that's a promise-stage pre-check merged into the same commit as the real-world
+# payout decision (see commits.yaml's comment on why these two are one commit, not
+# two), not the thing that decides friend_compensation's own route. Its route is
+# always BYPASS_TO_HUMAN regardless of what the pre-check scores (see engine.py's
+# "分支 1" branch and tests/test_engine.py's assertion that the pre-check result
+# only shows up in notes, never in route). There is nothing more here for an
+# admission check to exercise on the route itself — that's the point of
+# BYPASS_TO_HUMAN as a fourth outcome, not a gap in this file.

@@ -53,22 +53,20 @@ commits:
     precondition_fn: score_bond_claim
 
   - id: friend_compensation
-    name_cn: "对朋友补偿支付"
-    irreversibility: "钱出去且社交效果一次成型"
-    cost_reverse: inf
-    value: 388
-    cost_fix: 0
-    bypass_to_human: true
-    bypass_reason: "人情类证据机器不可组装（关系深浅/对方性格/开口语气不在 API 中）"
-
-  - id: expectation_setting
-    name_cn: "（软）预期设立类言语行为"
-    irreversibility: "预期无法无痕撤回"
+    name_cn: "对朋友的分账承诺与补偿"
+    irreversibility: "承诺无法无痕撤回；补偿一旦支付且社交效果一次成型"
     cost_reverse: inf
     value: 1000
     cost_fix: 0
-    soft_commit: true
+    # 两阶段合成一个 commit，因为现实里是同一件事：委托人先对朋友承诺按比例
+    # 分账（旧物一起卖），承诺本身走 expectation_gate 预检（precondition_fn）；
+    # 后来短期卖不掉、只能免费挂网找人一次性搬走，分账落空，改成现金+实物
+    # 结清——这个实付决定人情类证据机器不可组装，最终必须走 bypass_to_human。
+    # precondition_fn 在这里只是承诺阶段的预检，不影响、也不能替代最终必须
+    # 人终审这件事（mcp_server/server.py 里专门有测试保证这条不会被绕开）。
     precondition_fn: score_expectation_setting
+    bypass_to_human: true
+    bypass_reason: "人情类证据机器不可组装（关系深浅/对方性格/开口语气不在 API 中）；precondition_fn 只是承诺阶段的预检，不代表最终补偿可以被自动授权"
 
   - id: air_freight_dispatch
     name_cn: "空运纸箱交运（加固决策）"

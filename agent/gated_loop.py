@@ -198,18 +198,30 @@ def make_case_gate_fn(case: str) -> GateFn:
     def gate_fn(context: str, action: dict) -> GateResult:
         commit_id = action["commit_id"]
         commit = commits_by_id[commit_id]
+        evidence = dict(all_evidence.get(commit_id, {}))
 
         # ---- 分支 1：人情类，直接旁路给人（engine.py 分支 1 的等价物） ----
         if commit.get("bypass_to_human"):
+            reason = commit.get("bypass_reason", "")
+            # 同 engine.py：precondition_fn（若有）只是承诺阶段的预检，记录在
+            # reason 里，不影响最终恒为 BYPASS_TO_HUMAN 的路由。
+            if commit.get("precondition_fn"):
+                score_fn = registry[commit["precondition_fn"]]
+                pre = score_fn(evidence)
+                pre_allowed = config.expectation_gate(
+                    pre.get("contains_promise", True),
+                    pre.get("has_feasibility_evidence", False),
+                )
+                pre_route = "PASS" if pre_allowed else "ESCALATE"
+                reason = f"承诺阶段：{pre_route}——{pre['notes']}　{reason}"
             return GateResult(
                 route="BYPASS_TO_HUMAN", R=0, C=0, O=0, Ro=0, Q=0,
                 verifiable_ext=False,
-                reason=commit.get("bypass_reason", ""),
+                reason=reason,
             )
 
         score_fn = registry[commit["precondition_fn"]]
         repair_fn = repair_registry.get(commit["precondition_fn"])
-        evidence = dict(all_evidence.get(commit_id, {}))
 
         return resolve_precondition(
             config, score_fn, evidence,

@@ -80,9 +80,22 @@ def build_graph(case: str):
         commit = commits_by_id[commit_id]
 
         if commit.get("bypass_to_human"):
+            reason = commit.get("bypass_reason", "")
+            # 同 engine.py / gated_loop.py：precondition_fn（若有）只是承诺阶段
+            # 的预检，记录进 reason，不影响最终恒为 BYPASS_TO_HUMAN 的路由。
+            if commit.get("precondition_fn"):
+                evidence = dict(all_evidence.get(commit_id, {}))
+                score_fn = registry[commit["precondition_fn"]]
+                pre = score_fn(evidence)
+                pre_allowed = config.expectation_gate(
+                    pre.get("contains_promise", True),
+                    pre.get("has_feasibility_evidence", False),
+                )
+                pre_route = "PASS" if pre_allowed else "ESCALATE"
+                reason = f"承诺阶段：{pre_route}——{pre['notes']}　{reason}"
             result = GateResult(
                 route="BYPASS_TO_HUMAN", R=0, C=0, O=0, Ro=0, Q=0,
-                verifiable_ext=False, reason=commit.get("bypass_reason", ""),
+                verifiable_ext=False, reason=reason,
             )
         else:
             score_fn = registry[commit["precondition_fn"]]
