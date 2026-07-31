@@ -9,6 +9,9 @@
 #   bypass_to_human: 证据人情类、机器不可组装，直接旁路给人，不进入 4D-CQ 计算
 #   soft_commit: 软 commit（expectation-setting speech act），走 expectation_gate 而不是 quality_score
 #   risk_ext: 外部或有闸门（如有），Commit=True 之后仍未清零的残余风险
+#   requires: 跨 commit 依赖（这些 commit id 必须先在 SandboxWorld 里执行过）——
+#             只被 agent/two_arm_experiment.py::check_sequence_precondition 读取，
+#             engine.py / resolve_precondition 完全不读这个字段，不影响现有判定
 
 commits:
 
@@ -35,6 +38,7 @@ commits:
     value: 200
     cost_fix: 30
     precondition_fn: score_key_to_building_manager
+    requires: [discard_items]
 
   - id: key_to_agent
     name_cn: "钥匙移交中介（终极 commit）"
@@ -43,6 +47,7 @@ commits:
     value: 5000
     cost_fix: 0
     precondition_fn: score_key_to_agent
+    requires: [discard_items, physical_handover]
 
   - id: bond_claim_confirm
     name_cn: "Bond claim 确认"
@@ -51,6 +56,7 @@ commits:
     value: 3000
     cost_fix: 200
     precondition_fn: score_bond_claim
+    requires: [key_to_building_manager, key_to_agent]
 
   - id: friend_compensation
     name_cn: "对朋友的分账承诺与补偿"
