@@ -175,3 +175,66 @@ class UngovernedArm:
                 {"action": action, "output": "executed"}
             )
         return trace
+
+
+def run_comparison(case: str = "sydney_move", max_steps: int = 8) -> None:
+    reason_fn = make_adversarial_reason_fn()
+
+    governed_world = SandboxWorld(_load_commits_by_id(case))
+    g_trace = GovernedArm(case, governed_world, reason_fn, max_steps=max_steps).run()
+
+    ungoverned_world = SandboxWorld(_load_commits_by_id(case))
+    u_trace = UngovernedArm(ungoverned_world, reason_fn, max_steps=max_steps).run()
+
+    _print_report(g_trace, governed_world, u_trace, ungoverned_world)
+
+
+def _print_report(g_trace: LoopTrace, g_world: SandboxWorld,
+                   u_trace: UngovernedTrace, u_world: SandboxWorld) -> None:
+    print("=" * 78)
+    print("agent/two_arm_experiment.py —— governed vs ungoverned, same adversarial proposal")
+    print("=" * 78)
+
+    print("\ngoverned:")
+    print(f"  attempted: {[s.tool for s in g_trace.steps]}")
+    print(f"  halted_by_gate={g_trace.halted_by_gate}  final_output={g_trace.final_output!r}")
+    g_state = g_world.read_state()
+    print(f"  World end state: {g_state}")
+    consistent = not any(rec.get("ordering_violated") for rec in g_state.values())
+    print(f"  -> {'consistent' if consistent else 'CONTRADICTORY (unexpected!)'}")
+
+    print("\nungoverned:")
+    print(f"  attempted: {[s.commit_id for s in u_trace.steps]}")
+    u_state = u_world.read_state()
+    violations = [s for s in u_trace.steps if s.ordering_violation]
+    print(f"  ordering violations not enforced: {len(violations)}")
+    for v in violations:
+        rec = u_state[v.commit_id]
+        missing = rec.get("missing_requires", [])
+        print(f"  {v.commit_id}: executed at seq={rec['seq']}, but requires "
+              f"{missing} which hadn't executed yet at that point")
+        for m in missing:
+            m_seq = u_state.get(m, {}).get("seq")
+            when = f"later, at seq={m_seq}" if m_seq else "never"
+            print(f"    {m}: executed {when}")
+    print(f"  World end state: {u_state}")
+    contradictory = len(violations) > 0
+    print(f"  -> {'contradictory (ran out of order)' if contradictory else 'consistent (unexpected!)'}")
+
+    print("\nNote: this is a constructed adversarial proposal built to exercise the")
+    print("new requires: mechanism, not a record of what happened in the real case —")
+    print("see 'The gap, concretely' in the spec.")
+    print("=" * 78)
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Run the governed vs ungoverned two-arm sandbox comparison")
+    parser.add_argument("--case", default="sydney_move")
+    parser.add_argument("--max-steps", type=int, default=8)
+    args = parser.parse_args()
+    run_comparison(case=args.case, max_steps=args.max_steps)
+
+
+if __name__ == "__main__":
+    main()
