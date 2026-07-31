@@ -135,7 +135,7 @@ def test_sydney_move_case_reproduces_expected_routes():
     # air_freight_dispatch must still carry residual external risk even though it PASSes —
     # this is the "Commit(a,E)=True != Total_Cost settled" point the README makes.
     risk_record = next(r for r in records if r["commit_id"] == "air_freight_dispatch")
-    assert risk_record["risk_ext"] == GateConfig.expected_external_risk(0.15, 1240)
+    assert risk_record["risk_ext"] == GateConfig.expected_external_risk(0.15, 1000)
 
     # friend_compensation is bypassed to human, never scored on the 4D-CQ axes —
     # but it merges two real stages of the same story (promise, then payout after

@@ -16,8 +16,10 @@ to "a person executes one step, and needs to know whether to stop." This
 repo is a small, runnable engine (`gate.py` + `engine.py`, ~250 lines, one
 dependency) that encodes that decision rule and runs it end-to-end on the
 real case it came from: a 7-commit, cross-border, remote lease-termination
-in Sydney, with real dollar amounts and real third-party executors (names
-replaced with role labels, facts kept real). `python engine.py run
+in Sydney, with real third-party executors (names replaced with role
+labels) and a real decision structure (this repo is public on GitHub, so
+exact dollar amounts and the precise location are generalized — see "Case
+notes" at the end). `python engine.py run
 --case=sydney_move` reproduces all 7 routing decisions deterministically —
 no LLM call needed, the decision logic itself is the point.
 
@@ -33,9 +35,10 @@ no LLM call needed, the decision logic itself is the point.
 "这事儿机器判不了、直接交给人"四种结果——全部对应真实发生过的事，不是编的。
 
 这不是一个抽象 demo。`evidence/sydney_move_evidence.yaml` 里的每一条都是这次悉尼
-Rosebery 公寓远程退租真实发生过的事——包括案例后期新增的空运纸箱加固决策和关税不确定性。
-代码跑的是真实数据，不是虚构 case。第三方（中介、楼管、货代等）的姓名已替换为身份角色标注，
-金额与事实细节保留真实。
+公寓远程退租真实发生过的事——包括案例后期新增的空运纸箱加固决策和关税不确定性。
+代码跑的是真实事实结构，不是虚构 case。第三方（中介、楼管、货代等）的姓名已替换为
+身份角色标注，具体地点和金额已泛化处理（GitHub 是公开仓库，不展示可能定位到个人的
+精确地点和真实财务数字）；决策路径、证据缺口、路由结果这些结构性事实保留真实。
 
 **如实说明出发点**：这套方法论不是先做了一个 AI agent、再想办法管它，也不是照
 着行业框架图设计出来的——它是这次真实退租案例逼出来的：7 个决策点里有好几个一
@@ -123,7 +126,8 @@ route 结果跟本 README 里描述的完全一致。改了 `commits/sydney_move
   先承诺按比例分账，旧物短期卖不掉、分账落空后改现金+实物结清；承诺阶段有客观证据，
   单独走一次 `expectation_gate` 预检并记录在案，但预检结果不会、也不能替最终的人工补偿决定拍板）。
 - **外部或有闸门 Risk_ext**：`air_freight_dispatch`（空运纸箱交运）这一条即使 route=PASS，
-  引擎仍会额外报告 `Risk_ext = p_inspect × Loss(a∣inspected) = 0.15 × 1240 ≈ ¥186`——
+  引擎仍会额外报告 `Risk_ext = p_inspect × Loss(a∣inspected)`（抽查概率 × 抽查后估损，
+  具体数字用代表性量级，不展示真实估损金额）——
   这是本框架这次新增的理论点：**Commit(a,E)=True 不代表总成本已确定**，
   海关抽查这类第三方裁量风险不会因为 gate 放行就清零。
 
@@ -163,7 +167,7 @@ passport）——都是"在推理和真正执行之间插一道独立判定"的�
   断言前者的 `route()` 不能是 PASS、后者必须是 PASS。
 - **Q 与风险大小正交**：4D-CQ 质量分只判断证据本身够不够格，不看金额或可逆性——
   那部分由 `IsCommit`/`LoopMode`/`Risk_ext` 单独处理，同一条 τ_pass=0.85 同时
-  用于 ¥50 的"扔弃物品"和 ¥17,100 的"空运纸箱交运"。
+  用于"扔弃物品"这种小额动作和"空运纸箱交运"这种金额差出几个数量级的动作。
 - **评估对象不同**：WorkBuddy Bench 是事后能力评估——任务跑完后打分，衡量
   agent 能不能独立完成整个任务。GateFix 是事中风险拦截——判断某个具体动作
   在变得不可逆之前能不能自动放行。二者可以在同一个生产系统里叠加，不是
@@ -402,3 +406,11 @@ up through a six-step methodology (jurisdiction grounding → inherited-
 liability assessment → commit backward-chaining → executor binding → cheap
 reversible probing → evidence-package gating → custody chain → settlement
 audit). Those notes are private working material, not a publication.
+
+This repo is public on GitHub. Third-party names were already replaced with
+role labels from the start; on top of that, this pass removed the exact
+suburb (kept at city level: Sydney) and replaced every dollar amount with a
+`low`/`mid`/`high` magnitude tier (`engine.py::VALUE_TIER_SCALE`) or a
+round representative number — decision structure, routing outcomes, and
+evidence gaps are unchanged, only the numbers and precise location are
+generalized.

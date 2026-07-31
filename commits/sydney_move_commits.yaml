@@ -2,8 +2,10 @@
 # 数据来源：私人案例笔记（未发表，非论文）第5节"Commit Gates"表 + 案例后期新增的空运纸箱事件
 #
 # 每个 commit 定义：
-#   cost_reverse: 撤销这个动作的成本（inf = 完全不可逆）
-#   value:        这个动作本身的价值/涉及金额（用于 IsCommit 的 λ·Value 判定，单位：AUD 等价）
+#   cost_reverse: 撤销这个动作的成本（inf = 完全不可逆；不是货币数字时也用代表性量级，理由同 value_tier）
+#   value_tier:   这个动作本身的价值量级——low/mid/high 三档，不是真实金额（GitHub 公开仓库，
+#                 不展示案例的真实财务数字）。engine.py 按 VALUE_TIER_SCALE 换算成代表性数字
+#                 参与 IsCommit 的 λ·Value 判定，换算后的相对大小关系和真实数据一致，数字本身是假的。
 #   cost_fix:     一旦出错，修复成本（用于 on/in-loop 划界）
 #   precondition_fn: preconditions/sydney_move.py 里对应的打分函数名
 #   bypass_to_human: 证据人情类、机器不可组装，直接旁路给人，不进入 4D-CQ 计算
@@ -19,7 +21,7 @@ commits:
     name_cn: "扔弃物品"
     irreversibility: "物品不可恢复"
     cost_reverse: inf
-    value: 50
+    value_tier: low
     cost_fix: 0
     precondition_fn: score_discard_items
 
@@ -27,7 +29,7 @@ commits:
     name_cn: "实物交割（家电出门）"
     irreversibility: "交割即终"
     cost_reverse: inf
-    value: 100
+    value_tier: low
     cost_fix: 0
     precondition_fn: score_physical_handover
 
@@ -35,7 +37,7 @@ commits:
     name_cn: "钥匙移交楼管（Building Manager）"
     irreversibility: "失去直接控制"
     cost_reverse: 50
-    value: 200
+    value_tier: low
     cost_fix: 30
     precondition_fn: score_key_to_building_manager
     requires: [discard_items]
@@ -44,7 +46,7 @@ commits:
     name_cn: "钥匙移交中介（终极 commit）"
     irreversibility: "失去物理访问权，一切遗漏无法补救"
     cost_reverse: inf
-    value: 5000
+    value_tier: high
     cost_fix: 0
     precondition_fn: score_key_to_agent
     requires: [discard_items, physical_handover]
@@ -53,7 +55,7 @@ commits:
     name_cn: "Bond claim 确认"
     irreversibility: "资金结算"
     cost_reverse: 500
-    value: 3000
+    value_tier: mid
     cost_fix: 200
     precondition_fn: score_bond_claim
     requires: [key_to_building_manager, key_to_agent]
@@ -62,7 +64,7 @@ commits:
     name_cn: "对朋友的分账承诺与补偿"
     irreversibility: "承诺无法无痕撤回；补偿一旦支付且社交效果一次成型"
     cost_reverse: inf
-    value: 1000
+    value_tier: mid
     cost_fix: 0
     # 两阶段合成一个 commit，因为现实里是同一件事：委托人先对朋友承诺按比例
     # 分账（旧物一起卖），承诺本身走 expectation_gate 预检（precondition_fn）；
@@ -78,10 +80,10 @@ commits:
     name_cn: "空运纸箱交运（加固决策）"
     irreversibility: "交运后途中损坏不可逆，只能靠加固降低概率、不能消除"
     cost_reverse: inf
-    value: 17100
+    value_tier: high
     cost_fix: 0
     precondition_fn: score_air_freight_dispatch
     risk_ext:
       p_inspect: 0.15
-      loss_if_inspected: 1240
+      loss_if_inspected: 1000   # 代表性数字，不是真实估损金额
       note: "海关抽查是概率性事件，agent 不可控；触发后的损失可被证据质量（如实申报+凭证）压低，不能靠改数字降低"
