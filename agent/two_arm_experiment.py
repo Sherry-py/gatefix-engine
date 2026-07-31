@@ -127,3 +127,51 @@ class GovernedArm:
 
     def run(self) -> LoopTrace:
         return self.loop.run(context="sydney_move", initial_state={})
+
+
+@dataclass
+class UngovernedStepResult:
+    step: int
+    commit_id: str
+    ordering_violation: bool
+    detail: str = ""
+
+
+@dataclass
+class UngovernedTrace:
+    steps: list = field(default_factory=list)
+
+
+class UngovernedArm:
+    """跳过 gate，无条件调用 world.execute——reason_fn 提议什么就执行什么，
+    包括违反 requires 的提案。OrderingViolation 被捕获、记录，但不会让循环
+    停下：这条臂没有能停下来的机制，这正是要演示的失败模式。"""
+
+    def __init__(self, world: SandboxWorld, reason_fn: ReasonFn, max_steps: int = 8):
+        self.world = world
+        self.reason_fn = reason_fn
+        self.max_steps = max_steps
+
+    def run(self) -> UngovernedTrace:
+        trace = UngovernedTrace()
+        state: dict = {}
+        for _ in range(self.max_steps):
+            action, _ = self.reason_fn(state)
+            if action.get("type") == "finish":
+                break
+            commit_id = action["commit_id"]
+            try:
+                self.world.execute(commit_id)
+                trace.steps.append(UngovernedStepResult(
+                    step=len(trace.steps) + 1, commit_id=commit_id,
+                    ordering_violation=False,
+                ))
+            except OrderingViolation as e:
+                trace.steps.append(UngovernedStepResult(
+                    step=len(trace.steps) + 1, commit_id=commit_id,
+                    ordering_violation=True, detail=str(e),
+                ))
+            state.setdefault("history", []).append(
+                {"action": action, "output": "executed"}
+            )
+        return trace
