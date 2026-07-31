@@ -174,7 +174,7 @@ def test_air_freight_dispatch_oracle_is_pass():
 # ---------- expectation_setting (soft commit — expectation_gate, not route()) ----------
 
 def test_expectation_setting_unsupported_promise_is_blocked():
-    baseline = {"promised_amount": 1000, "feasibility_probe_done": False, "feasibility_evidence": None}
+    baseline = {"promised_amount_tier": "mid", "feasibility_probe_done": False, "feasibility_evidence": None}
     result = p.score_expectation_setting(baseline)
     allowed = cfg.expectation_gate(result["contains_promise"], result["has_feasibility_evidence"])
     assert allowed is False
@@ -182,7 +182,7 @@ def test_expectation_setting_unsupported_promise_is_blocked():
 
 def test_expectation_setting_supported_promise_is_allowed():
     oracle = {
-        "promised_amount": 1000, "feasibility_probe_done": True,
+        "promised_amount_tier": "mid", "feasibility_probe_done": True,
         "feasibility_evidence": "friend quote + marketplace listings",
     }
     result = p.score_expectation_setting(oracle)

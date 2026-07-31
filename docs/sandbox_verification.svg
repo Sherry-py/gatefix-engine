@@ -157,9 +157,9 @@
 
 <rect x="810" y="680" width="770" height="128" rx="12" fill="#FDECEE" stroke="#CE5560" stroke-width="1.6"/>
 <text x="1195" y="706" font-size="13" font-weight="700" fill="#A03B45" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">ungoverned 终态：矛盾（contradictory）</text>
-<text x="1195" y="728" font-size="9.5" fill="#A03B45" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">world.read_state()：key_to_agent=未执行，</text>
-<text x="1195" y="744" font-size="9.5" fill="#A03B45" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">bond_claim_confirm=已执行（已退款）</text>
-<text x="1195" y="768" font-size="9.5" font-weight="700" fill="#A03B45" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">同一个提案，没了 gate 就直接执行——矛盾从 World 读出，不是 harness 编的</text>
+<text x="1195" y="728" font-size="9.5" fill="#A03B45" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">world.read_state()：bond_claim_confirm 在 seq=3 执行，key_to_building_manager/</text>
+<text x="1195" y="744" font-size="9.5" fill="#A03B45" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">key_to_agent 后来确实也执行了（seq=4/5）——但已经晚了</text>
+<text x="1195" y="768" font-size="9.5" font-weight="700" fill="#A03B45" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">不是"钥匙没交"，是"Bond 抢跑了"——矛盾从 seq 顺序读出，不是 harness 编的</text>
 <text x="1195" y="790" font-size="8.4" fill="#8A8A84" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">测试：test_ungoverned_arm_reaches_contradictory_state</text>
 
 <rect x="20" y="822" width="1560" height="46" rx="10" fill="#F7F5EE" stroke="#DEDED8" stroke-width="1.4"/>
@@ -203,9 +203,9 @@
 
 <rect x="810" y="1076" width="770" height="150" rx="12" fill="#F7F5EE" stroke="#DEDED8" stroke-width="1.6"/>
 <text x="830" y="1102" font-size="13" font-weight="700" fill="#3A3A36" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">状态与来源</text>
-<text x="830" y="1126" font-size="10" fill="#5C5C56" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">状态：设计阶段，spec 已确认，尚未实现——这张图不代表已经跑通的结论。</text>
-<text x="830" y="1146" font-size="10" fill="#5C5C56" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">修订记录：早期草稿曾让两臂走不同提案，导致 governed 的拦截会被误记成新机制</text>
-<text x="830" y="1166" font-size="10" fill="#5C5C56" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">的功劳——已改为两臂共用同一提案，见 test_both_arms_receive_the_same_proposed_plan。</text>
+<text x="830" y="1126" font-size="10" fill="#5C5C56" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">状态：已实现——见 world/sydney_move_world.py、agent/two_arm_experiment.py、</text>
+<text x="830" y="1146" font-size="10" fill="#5C5C56" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">tests/test_two_arm_experiment.py；跑 python agent/two_arm_experiment.py 看实时报告。</text>
+<text x="830" y="1166" font-size="10" fill="#5C5C56" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">修订记录：两臂曾用不同提案、ungoverned 终态描述也曾算错——都已修正，见测试与 spec。</text>
 <text x="830" y="1188" font-size="10" fill="#5C5C56" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">spec：docs/superpowers/specs/2026-07-31-two-arm-sandbox-experiment-design.md</text>
 <text x="830" y="1210" font-size="9.3" fill="#8A8A84" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">写法参考：Rust RFC（alternatives/drawbacks）、Amazon PR/FAQ（最难问题自答）、Nygard ADR（决策跟代价）</text>
 </svg>

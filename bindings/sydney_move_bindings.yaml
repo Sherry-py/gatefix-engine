@@ -14,13 +14,13 @@ bindings:
     executor_type: human
     executor: "二手买家（自带卡车）"
     channel: "二手交易平台评论区 + 私信"
-    incentive: "免费自取，付 $100"
+    incentive: "免费自取，付一笔小额费用"
 
   key_to_building_manager:
     executor_type: human
     executor: "楼管（Building Manager）"
     channel: "WhatsApp"
-    incentive: "实物赠与（$150 玩具）"
+    incentive: "实物赠与（一份小礼物）"
 
   key_to_agent:
     executor_type: human

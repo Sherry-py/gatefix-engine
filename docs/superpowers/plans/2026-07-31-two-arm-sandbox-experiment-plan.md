@@ -27,7 +27,7 @@
 
 `SandboxWorld` 故意设计成没有判断力：`execute()` 被要求记什么就记什么，哪怕某个 commit 的 `requires` 没满足。它仍然会抛 `OrderingViolation`——但是**记录之后才抛**，不是拒绝记录。这是对 spec 里一处真实张力的解法（见上面的更正说明）：如果世界在违规时拒绝记录，ungoverned 臂就永远到不了"错了但确实记录在案"这个状态，而这正是整个实验存在的意义。执行判断该不该发生的责任在 gate（任务 3），不在 world。world 的职责是如实说出发生了什么，不是对该不该发生有意见。
 
-- [ ] **步骤 1：写失败的测试**
+- [x] **步骤 1：写失败的测试**
 
 新建 `tests/test_two_arm_experiment.py`：
 
@@ -76,17 +76,17 @@ def test_world_raises_ordering_violation_on_unmet_requires():
     assert state["b"]["missing_requires"] == ["a"]
 ```
 
-- [ ] **步骤 2：跑测试，确认它失败**
+- [x] **步骤 2：跑测试，确认它失败**
 
 运行：`cd "/Users/sherry/Library/Mobile Documents/com~apple~CloudDocs/harness_engineer/gatefix-engine" && python3 -m pytest tests/test_two_arm_experiment.py -v`
 
 预期：`ModuleNotFoundError: No module named 'world'`
 
-- [ ] **步骤 3：建 `world` 包**
+- [x] **步骤 3：建 `world` 包**
 
 新建 `world/__init__.py`（空文件——跟这个仓库里 `preconditions/__init__.py` 的做法一样）。
 
-- [ ] **步骤 4：实现 `SandboxWorld`**
+- [x] **步骤 4：实现 `SandboxWorld`**
 
 新建 `world/sydney_move_world.py`：
 
@@ -166,12 +166,12 @@ class SandboxWorld:
         return {cid: dict(rec) for cid, rec in self._state.items()}
 ```
 
-- [ ] **步骤 5：跑测试，确认通过**
+- [x] **步骤 5：跑测试，确认通过**
 
 运行：`python3 -m pytest tests/test_two_arm_experiment.py -v`
 预期：两个测试都 PASS。
 
-- [ ] **步骤 6：提交**
+- [x] **步骤 6：提交**
 
 ```bash
 git add world/__init__.py world/sydney_move_world.py tests/test_two_arm_experiment.py
@@ -187,7 +187,7 @@ git commit -m "feat: add SandboxWorld — records commit execution, doesn't gate
 
 这是本计划里唯一一处改真实案例数据的地方，只加 spec 里确认过的跨 commit 依赖图，别的不动——`engine.py`/`resolve_precondition` 不读这个字段，所以现有 57 个测试应该完全不受影响。
 
-- [ ] **步骤 1：加 `requires:` 字段**
+- [x] **步骤 1：加 `requires:` 字段**
 
 在 `commits/sydney_move_commits.yaml` 里给三个 commit 加 `requires:`。文件目前是这样（相关片段）：
 
@@ -196,7 +196,7 @@ git commit -m "feat: add SandboxWorld — records commit execution, doesn't gate
     name_cn: "钥匙移交楼管（Building Manager）"
     irreversibility: "失去直接控制"
     cost_reverse: 50
-    value: 200
+    value_tier: low
     cost_fix: 30
     precondition_fn: score_key_to_building_manager
 ```
@@ -208,7 +208,7 @@ git commit -m "feat: add SandboxWorld — records commit execution, doesn't gate
     name_cn: "钥匙移交楼管（Building Manager）"
     irreversibility: "失去直接控制"
     cost_reverse: 50
-    value: 200
+    value_tier: low
     cost_fix: 30
     precondition_fn: score_key_to_building_manager
     requires: [discard_items]
@@ -219,7 +219,7 @@ git commit -m "feat: add SandboxWorld — records commit execution, doesn't gate
     name_cn: "钥匙移交中介（终极 commit）"
     irreversibility: "失去物理访问权，一切遗漏无法补救"
     cost_reverse: inf
-    value: 5000
+    value_tier: high
     cost_fix: 0
     precondition_fn: score_key_to_agent
 ```
@@ -231,7 +231,7 @@ git commit -m "feat: add SandboxWorld — records commit execution, doesn't gate
     name_cn: "钥匙移交中介（终极 commit）"
     irreversibility: "失去物理访问权，一切遗漏无法补救"
     cost_reverse: inf
-    value: 5000
+    value_tier: high
     cost_fix: 0
     precondition_fn: score_key_to_agent
     requires: [discard_items, physical_handover]
@@ -242,7 +242,7 @@ git commit -m "feat: add SandboxWorld — records commit execution, doesn't gate
     name_cn: "Bond claim 确认"
     irreversibility: "资金结算"
     cost_reverse: 500
-    value: 3000
+    value_tier: mid
     cost_fix: 200
     precondition_fn: score_bond_claim
 ```
@@ -254,7 +254,7 @@ git commit -m "feat: add SandboxWorld — records commit execution, doesn't gate
     name_cn: "Bond claim 确认"
     irreversibility: "资金结算"
     cost_reverse: 500
-    value: 3000
+    value_tier: mid
     cost_fix: 200
     precondition_fn: score_bond_claim
     requires: [key_to_building_manager, key_to_agent]
@@ -276,12 +276,12 @@ git commit -m "feat: add SandboxWorld — records commit execution, doesn't gate
 #             engine.py / resolve_precondition 完全不读这个字段，不影响现有判定
 ```
 
-- [ ] **步骤 2：确认现有测试套件不受影响**
+- [x] **步骤 2：确认现有测试套件不受影响**
 
 运行：`python3 -m pytest -v`
 预期：全部 59 个测试通过（57 个原有的 + 任务 1 新增的 2 个）——新字段在任务 3 之前一直是"死"的，没人读它。
 
-- [ ] **步骤 3：提交**
+- [x] **步骤 3：提交**
 
 ```bash
 git add commits/sydney_move_commits.yaml
@@ -298,7 +298,7 @@ git commit -m "feat: add cross-commit requires: dependency graph to sydney_move 
 
 新的 Ordering 检查在这里接进来——用一个包装 `make_case_gate_fn`（来自完全没动过的 `agent/gated_loop.py`）的函数来做，不是改它。本任务不改 `gate.py`、`engine.py`、`agent/gated_loop.py` 任何一行。
 
-- [ ] **步骤 1：写失败的测试**
+- [x] **步骤 1：写失败的测试**
 
 追加到 `tests/test_two_arm_experiment.py`：
 
@@ -356,12 +356,12 @@ def test_governed_gate_fn_blocks_before_reaching_base_gate_fn():
     assert result.route == "ESCALATE"  # falls through to the real, unrelated evidence check
 ```
 
-- [ ] **步骤 2：跑测试，确认失败**
+- [x] **步骤 2：跑测试，确认失败**
 
 运行：`python3 -m pytest tests/test_two_arm_experiment.py -v`
 预期：`ModuleNotFoundError: No module named 'agent.two_arm_experiment'`
 
-- [ ] **步骤 3：新建 `agent/two_arm_experiment.py`，先写这两个函数**
+- [x] **步骤 3：新建 `agent/two_arm_experiment.py`，先写这两个函数**
 
 ```python
 """
@@ -442,17 +442,17 @@ def make_governed_gate_fn(case: str, world: SandboxWorld) -> GateFn:
     return gate_fn
 ```
 
-- [ ] **步骤 4：跑测试，确认通过**
+- [x] **步骤 4：跑测试，确认通过**
 
 运行：`python3 -m pytest tests/test_two_arm_experiment.py -v`
 预期：这个文件里全部 6 个测试 PASS。
 
-- [ ] **步骤 5：跑全量测试，确认没有回归**
+- [x] **步骤 5：跑全量测试，确认没有回归**
 
 运行：`python3 -m pytest -v`
 预期：全部 63 个测试通过（任务 2 之前的 59 个 + 这次新增 4 个）。
 
-- [ ] **步骤 6：提交**
+- [x] **步骤 6：提交**
 
 ```bash
 git add agent/two_arm_experiment.py tests/test_two_arm_experiment.py
@@ -467,7 +467,7 @@ git commit -m "feat: add check_sequence_precondition and make_governed_gate_fn"
 - 修改：`agent/two_arm_experiment.py`
 - 修改：`tests/test_two_arm_experiment.py`
 
-- [ ] **步骤 1：写失败的测试**
+- [x] **步骤 1：写失败的测试**
 
 追加到 `tests/test_two_arm_experiment.py`：
 
@@ -519,12 +519,12 @@ def test_governed_arm_blocks_on_ordering_before_execution():
     assert state["physical_handover"]["executed"] is True
 ```
 
-- [ ] **步骤 2：跑测试，确认失败**
+- [x] **步骤 2：跑测试，确认失败**
 
 运行：`python3 -m pytest tests/test_two_arm_experiment.py -v`
 预期：`ImportError: cannot import name 'ADVERSARIAL_ORDER'`
 
-- [ ] **步骤 3：实现 `ADVERSARIAL_ORDER`、`make_adversarial_reason_fn`、`GovernedArm`**
+- [x] **步骤 3：实现 `ADVERSARIAL_ORDER`、`make_adversarial_reason_fn`、`GovernedArm`**
 
 追加到 `agent/two_arm_experiment.py`：
 
@@ -582,12 +582,12 @@ class GovernedArm:
         return self.loop.run(context="sydney_move", initial_state={})
 ```
 
-- [ ] **步骤 4：跑测试，确认通过**
+- [x] **步骤 4：跑测试，确认通过**
 
 运行：`python3 -m pytest tests/test_two_arm_experiment.py -v`
 预期：这个文件里全部 8 个测试 PASS。
 
-- [ ] **步骤 5：提交**
+- [x] **步骤 5：提交**
 
 ```bash
 git add agent/two_arm_experiment.py tests/test_two_arm_experiment.py
@@ -604,7 +604,7 @@ git commit -m "feat: add shared adversarial reason_fn and GovernedArm"
 
 这里就是本文档开头"修正后的理解"要发挥作用的地方：测试断言的是**实际会发生的事**（Bond 在它的前置条件**之前**被确认，而那两个前置条件后来确实也执行了），不是 spec 示例文本里写的那样（前置条件从没执行过）。
 
-- [ ] **步骤 1：写失败的测试**
+- [x] **步骤 1：写失败的测试**
 
 追加到 `tests/test_two_arm_experiment.py`：
 
@@ -646,12 +646,12 @@ def test_ungoverned_arm_reaches_contradictory_state():
     assert state["bond_claim_confirm"]["seq"] < state["key_to_agent"]["seq"]
 ```
 
-- [ ] **步骤 2：跑测试，确认失败**
+- [x] **步骤 2：跑测试，确认失败**
 
 运行：`python3 -m pytest tests/test_two_arm_experiment.py -v`
 预期：`ImportError: cannot import name 'UngovernedArm'`
 
-- [ ] **步骤 3：实现 `UngovernedStepResult`、`UngovernedTrace`、`UngovernedArm`**
+- [x] **步骤 3：实现 `UngovernedStepResult`、`UngovernedTrace`、`UngovernedArm`**
 
 追加到 `agent/two_arm_experiment.py`：
 
@@ -704,12 +704,12 @@ class UngovernedArm:
         return trace
 ```
 
-- [ ] **步骤 4：跑测试，确认通过**
+- [x] **步骤 4：跑测试，确认通过**
 
 运行：`python3 -m pytest tests/test_two_arm_experiment.py -v`
 预期：这个文件里全部 9 个测试 PASS。
 
-- [ ] **步骤 5：提交**
+- [x] **步骤 5：提交**
 
 ```bash
 git add agent/two_arm_experiment.py tests/test_two_arm_experiment.py
@@ -724,7 +724,7 @@ git commit -m "feat: add UngovernedArm — same proposal, no gate, no halt"
 - 修改：`agent/two_arm_experiment.py`
 - 修改：`tests/test_two_arm_experiment.py`
 
-- [ ] **步骤 1：写失败的测试**
+- [x] **步骤 1：写失败的测试**
 
 追加到 `tests/test_two_arm_experiment.py`：
 
@@ -753,12 +753,12 @@ def test_both_arms_receive_the_same_proposed_plan():
     assert len(u_attempted) == 7
 ```
 
-- [ ] **步骤 2：跑测试**
+- [x] **步骤 2：跑测试**
 
 运行：`python3 -m pytest tests/test_two_arm_experiment.py -v`
 预期：PASS（任务 4、5 已经把这个测试要验证的东西都建好了——这一步是回归防护，不是新production代码；照样写、照样跑、确认它是"因为对的原因通过"，不要因为"没什么可实现的"就跳过这一步）。
 
-- [ ] **步骤 3：实现 `run_comparison()`、`_print_report()`、CLI**
+- [x] **步骤 3：实现 `run_comparison()`、`_print_report()`、CLI**
 
 追加到 `agent/two_arm_experiment.py`：
 
@@ -826,18 +826,18 @@ if __name__ == "__main__":
     main()
 ```
 
-- [ ] **步骤 4：手动跑一遍，看输出**
+- [x] **步骤 4：手动跑一遍，看输出**
 
 运行：`python3 agent/two_arm_experiment.py`
 
 预期：报告显示 `governed` 在 `bond_claim_confirm` 处停下、终态 `consistent`；`ungoverned` 走完全部 7 步、1 次违规未被拦、终态 `contradictory`——包括那几行"`key_to_building_manager`/`key_to_agent` 后来在 seq=N 执行了"，验证本文档开头那处修正后的理解。
 
-- [ ] **步骤 5：跑全量测试**
+- [x] **步骤 5：跑全量测试**
 
 运行：`python3 -m pytest -v`
 预期：全部 67 个测试通过（57 个原有 + 任务 1 的 2 个 + 任务 3 的 4 个 + 任务 4 的 2 个 + 任务 5 的 1 个 + 本任务的 1 个）。如果数字对不上，当成真 bug 去查，不要硬凑数字。
 
-- [ ] **步骤 6：提交**
+- [x] **步骤 6：提交**
 
 ```bash
 git add agent/two_arm_experiment.py tests/test_two_arm_experiment.py
@@ -855,7 +855,7 @@ git commit -m "feat: add run_comparison(), report printing, and CLI entrypoint"
 
 spec 和图现在都还写着"设计阶段，尚未实现"。这已经不是事实了，放着不改正好撞上这个仓库自己"如实说明现状"的原则想防的那种陈旧结论。这个任务顺带把 spec 和图里 ungoverned 终态的描述，按任务 5 修正后的真实轨迹改对——不是照抄 spec 原来（错的）示例。
 
-- [ ] **步骤 1：更新 spec 的状态行和对比报告示例**
+- [x] **步骤 1：更新 spec 的状态行和对比报告示例**
 
 在 `docs/superpowers/specs/2026-07-31-two-arm-sandbox-experiment-design.md` 里：
 
@@ -912,7 +912,7 @@ server wiring, third-party validation of the `requires:` graph — see the
 Punted list above, unchanged by this implementation.
 ```
 
-- [ ] **步骤 2：修正图里 ungoverned 终态框的文字**
+- [x] **步骤 2：修正图里 ungoverned 终态框的文字**
 
 在 `docs/sandbox_verification.svg` 里，找到这几行（ungoverned 终态框里）：
 
@@ -930,7 +930,7 @@ Punted list above, unchanged by this implementation.
 <text x="1195" y="768" font-size="9.5" font-weight="700" fill="#A03B45" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">不是"钥匙没交"，是"Bond 抢跑了"——矛盾从 seq 顺序读出，不是 harness 编的</text>
 ```
 
-- [ ] **步骤 3：更新图里的状态框**
+- [x] **步骤 3：更新图里的状态框**
 
 在 `docs/sandbox_verification.svg` 里，"状态与来源"那个框（大约第 204-210 行）目前完整内容是：
 
@@ -956,7 +956,7 @@ Punted list above, unchanged by this implementation.
 
 不需要改框的大小——新内容正好套进原来五行用过的 y 坐标。
 
-- [ ] **步骤 4：更新 README**
+- [x] **步骤 4：更新 README**
 
 在 `README.md` 里，把：
 
@@ -1061,16 +1061,16 @@ Punted list above, unchanged by this implementation.
 └── gate_record.jsonl                          # 运行后生成的判定记录（可重复生成，已提交一份跑过的样例）
 ```
 
-- [ ] **步骤 5：确认图渲染没问题**
+- [x] **步骤 5：确认图渲染没问题**
 
 在浏览器（或 Claude Browser 工具）里打开 `docs/sandbox_verification.svg`，肉眼确认步骤 2、3 改完之后没有文字重叠。
 
-- [ ] **步骤 6：最后再跑一次全量测试**
+- [x] **步骤 6：最后再跑一次全量测试**
 
 运行：`python3 -m pytest -v`
 预期：全部 67 个测试通过，跟任务 6 完成时一样（这个任务只动文档）。
 
-- [ ] **步骤 7：提交**
+- [x] **步骤 7：提交**
 
 ```bash
 git add docs/superpowers/specs/2026-07-31-two-arm-sandbox-experiment-design.md docs/sandbox_verification.svg README.md

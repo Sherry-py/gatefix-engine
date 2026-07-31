@@ -1,7 +1,7 @@
 # Two-arm sandbox experiment: governed vs ungoverned commit execution
 
 Date: 2026-07-31
-Status: approved for local-only scope (E2B deferred)
+Status: implemented (local-only scope; E2B still deferred — see Punted section)
 
 ## TL;DR
 
@@ -372,17 +372,21 @@ plan; only one of them is stopped *before execution* and the other isn't.
 governed:   proposed order: discard_items, physical_handover, bond_claim_confirm, ...
             halted at step 3 (bond_claim_confirm) — BLOCKED[ORDERING]:
             requires key_to_building_manager, key_to_agent (neither executed yet)
-            World end state: key_to_building_manager=not_executed,
-                              key_to_agent=not_executed, bond_claim_confirm=not_executed
+            World end state: only discard_items and physical_handover recorded;
+                              bond_claim_confirm never reached world.execute() at all
             -> consistent (the proposal was rejected before it could execute)
 
 ungoverned: same proposed order, no gate — 7/7 steps attempted, step 3
             (bond_claim_confirm) executed despite unmet requires
-            World end state: key_to_building_manager=not_executed,
-                              key_to_agent=not_executed, bond_claim_confirm=executed
-            -> contradictory (bond confirmed refunded while keys were never
-               handed over) — wrong-commit ground truth read directly from
-               World.read_state(), not asserted by the harness
+            World end state: bond_claim_confirm executed at seq=3 with
+                              ordering_violated=True; key_to_building_manager and
+                              key_to_agent DO execute later (seq=4, seq=5) — the
+                              contradiction isn't "the keys never got handed over,"
+                              it's that the bond was confirmed before they were,
+                              provably so from the seq ordering
+            -> contradictory (bond confirmed out of order, proven by seq, not
+               just inferred from a missing key) — ground truth read directly
+               from World.read_state(), not asserted by the harness
 
 Note: this is a constructed adversarial proposal built to exercise the new
 requires: mechanism, not a record of what happened in the real case (see
@@ -390,6 +394,12 @@ requires: mechanism, not a record of what happened in the real case (see
 refund-account-name mismatch — is a separate, already-handled issue; running
 `python engine.py run --case=sydney_move` shows it as ESCALATE today,
 unrelated to this experiment.
+
+Correction: an earlier draft of this section claimed key_to_building_manager
+and key_to_agent stay unexecuted in the ungoverned end state. Tracing the
+adversarial order by hand against SandboxWorld's actual semantics shows they
+do execute — just after bond_claim_confirm, which is the actual violation.
+See tests/test_two_arm_experiment.py::test_ungoverned_arm_reaches_contradictory_state.
 ```
 
 ### Tests: `tests/test_two_arm_experiment.py` (new)
@@ -414,6 +424,8 @@ unrelated to this experiment.
 
 ## Status / next step
 
-Design approved by the case owner (dependency graph confirmed against the
-real facts, delivery scope confirmed as local-only). Next step on approval of
-this revision: `writing-plans` to turn this into an implementation plan.
+Implemented. See `world/sydney_move_world.py`, `agent/two_arm_experiment.py`,
+`tests/test_two_arm_experiment.py`. Run `python agent/two_arm_experiment.py`
+for the live comparison report. Still punted: E2B backend, LangGraph/MCP
+server wiring, third-party validation of the `requires:` graph — see the
+Punted list above, unchanged by this implementation.
