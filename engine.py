@@ -26,6 +26,13 @@ from gate import GateConfig, GateRecord
 
 BASE_DIR = Path(__file__).parent
 
+# GitHub 是公开仓库，不展示案例的真实财务数字——value_tier 是 low/mid/high
+# 三档，这里换算成代表性数字参与 λ·Value 判定。数字本身是假的，但换算后
+# 每个 commit 之间的相对大小关系和真实数据一致，is_commit()/loop_mode() 的
+# 判定结果不受影响（tests/test_admission_gate.py、tests/test_engine.py 里
+# 断言的是 route，不是具体数字）。
+VALUE_TIER_SCALE = {"low": 100.0, "mid": 1000.0, "high": 10000.0}
+
 
 def _resolve_regular_commit(config, score_fn, repair_fn, evidence, verbose=False):
     """常规 commit 的三态路由 + AUTO_REPAIR 重试循环。从 run_case 抽成独立
@@ -123,7 +130,7 @@ def run_case(case: str, verbose: bool = False):
         cid = commit["id"]
         name = commit["name_cn"]
         cost_reverse = parse_number(commit.get("cost_reverse"))
-        value = parse_number(commit.get("value", 0))
+        value = VALUE_TIER_SCALE.get(commit.get("value_tier"), 0.0)
         cost_fix = parse_number(commit.get("cost_fix", 0))
         binding = bindings.get(cid, {})
         evidence = dict(all_evidence.get(cid, {}))
@@ -159,11 +166,11 @@ def run_case(case: str, verbose: bool = False):
                 print(f"  Send(msg) 被允许={pre_allowed} → {pre_route}"
                       "（仅记录，不影响最终 route——最终仍是 BYPASS_TO_HUMAN）")
                 stage_note = f"承诺阶段：{pre_route}——{pre['notes']}"
-                if evidence.get("actual_settlement_amount") is not None:
+                if evidence.get("actual_settlement_tier") is not None:
                     stage_note += (
-                        f"；实付阶段：{evidence.get('actual_settlement_form', '')}结清 "
-                        f"¥{evidence['actual_settlement_amount']}"
-                        f"（{evidence.get('settlement_reason', '')}）"
+                        f"；实付阶段：{evidence.get('actual_settlement_form', '')}结清"
+                        f"（金额量级：{evidence['actual_settlement_tier']}，"
+                        f"{evidence.get('settlement_reason', '')}）"
                     )
                 notes = f"{stage_note}　{notes}"
             print(f"  [阶段二·旁路] {commit.get('bypass_reason')}")
@@ -257,8 +264,8 @@ def run_case(case: str, verbose: bool = False):
     print("=" * 78)
     print(f"  Commit 总数: {len(records)}")
     print(f"  PASS: {n_pass}   ESCALATE/旁路人工: {n_escalate}   经过 AUTO_REPAIR: {n_repair}")
-    print(f"  Total_Cost_certain（已确定成本，仅 PASS 的 value 求和）: ¥/${total_certain_cost:.0f}")
-    print(f"  Total_Risk_ext（外部或有闸门期望敞口，Commit=True 之后仍未清零）: ¥{total_risk_ext:.1f}")
+    print(f"  Total_Cost_certain（已确定成本量级，仅 PASS 的 value_tier 换算求和，代表性单位非真实金额）: {total_certain_cost:.0f}")
+    print(f"  Total_Risk_ext（外部或有闸门期望敞口，Commit=True 之后仍未清零，代表性单位）: {total_risk_ext:.1f}")
     print(f"  Gate Record 已写入: {out_path}")
     print("=" * 78)
 

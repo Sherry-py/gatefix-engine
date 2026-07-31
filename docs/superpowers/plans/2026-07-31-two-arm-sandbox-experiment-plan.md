@@ -196,7 +196,7 @@ git commit -m "feat: add SandboxWorld — records commit execution, doesn't gate
     name_cn: "钥匙移交楼管（Building Manager）"
     irreversibility: "失去直接控制"
     cost_reverse: 50
-    value: 200
+    value_tier: low
     cost_fix: 30
     precondition_fn: score_key_to_building_manager
 ```
@@ -208,7 +208,7 @@ git commit -m "feat: add SandboxWorld — records commit execution, doesn't gate
     name_cn: "钥匙移交楼管（Building Manager）"
     irreversibility: "失去直接控制"
     cost_reverse: 50
-    value: 200
+    value_tier: low
     cost_fix: 30
     precondition_fn: score_key_to_building_manager
     requires: [discard_items]
@@ -219,7 +219,7 @@ git commit -m "feat: add SandboxWorld — records commit execution, doesn't gate
     name_cn: "钥匙移交中介（终极 commit）"
     irreversibility: "失去物理访问权，一切遗漏无法补救"
     cost_reverse: inf
-    value: 5000
+    value_tier: high
     cost_fix: 0
     precondition_fn: score_key_to_agent
 ```
@@ -231,7 +231,7 @@ git commit -m "feat: add SandboxWorld — records commit execution, doesn't gate
     name_cn: "钥匙移交中介（终极 commit）"
     irreversibility: "失去物理访问权，一切遗漏无法补救"
     cost_reverse: inf
-    value: 5000
+    value_tier: high
     cost_fix: 0
     precondition_fn: score_key_to_agent
     requires: [discard_items, physical_handover]
@@ -242,7 +242,7 @@ git commit -m "feat: add SandboxWorld — records commit execution, doesn't gate
     name_cn: "Bond claim 确认"
     irreversibility: "资金结算"
     cost_reverse: 500
-    value: 3000
+    value_tier: mid
     cost_fix: 200
     precondition_fn: score_bond_claim
 ```
@@ -254,7 +254,7 @@ git commit -m "feat: add SandboxWorld — records commit execution, doesn't gate
     name_cn: "Bond claim 确认"
     irreversibility: "资金结算"
     cost_reverse: 500
-    value: 3000
+    value_tier: mid
     cost_fix: 200
     precondition_fn: score_bond_claim
     requires: [key_to_building_manager, key_to_agent]
