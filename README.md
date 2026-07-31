@@ -37,19 +37,14 @@ Rosebery 公寓远程退租真实发生过的事——包括案例后期新增�
 代码跑的是真实数据，不是虚构 case。第三方（中介、楼管、货代等）的姓名已替换为身份角色标注，
 金额与事实细节保留真实。
 
-**如实说明出发点**：这套方法论不是先做了一个 AI agent、再想办法管它——它是从
-一次真实业务流程（悉尼退租）的执行前治理需求里提炼出来的，原始场景里做决策的
-是真人。AI agent 治理是这套方法论自然覆盖的一种情况，不是它的起点：只要"谁在
-执行下一步"这个问题存在（不管执行者是人、脚本还是 agent），判定逻辑关心的都是
-同一件事——证据够不够格放行。
-
-这套 Guardrails 层的形态不是照着行业框架图设计出来的，是这次真实退租案例逼出来
-的：7 个决策点里有好几个一旦做错就无法挽回（钥匙一旦移交、纸箱一旦交运海关就不
-受控），当时唯一能安全推进的办法就是给每一步定死"什么证据够、什么证据不够"，
-过了才能进下一步。这套判定纪律先于"Agent Harness""Guardrails"这些说法存在——
-行业最近才把这类"执行前拦一道"的做法归了类、起了名字，GateFix 是把一套原本就
-在真实压力下跑通了的纪律，正式接进这套命名体系，不是反过来先有了名字才去凑一个
-案例。
+**如实说明出发点**：这套方法论不是先做了一个 AI agent、再想办法管它，也不是照
+着行业框架图设计出来的——它是这次真实退租案例逼出来的：7 个决策点里有好几个一
+旦做错就无法挽回（钥匙一旦移交、纸箱一旦交运海关就不受控），当时唯一能安全推进
+的办法就是给每一步定死"什么证据够、什么证据不够"，过了才能进下一步。这套判定
+纪律先于"Agent Harness""Guardrails"这些说法存在，GateFix 只是把一套已经在真实
+压力下跑通的纪律，接进了行业最近才有的命名体系。AI agent 治理是它自然覆盖的一
+种情况，不是起点：只要"谁在执行下一步"这个问题存在（人、脚本还是 agent），判定
+逻辑关心的都是同一件事——证据够不够格放行。
 
 ## 怎么跑
 
@@ -103,13 +98,11 @@ route 结果跟本 README 里描述的完全一致。改了 `commits/sydney_move
 
 ## 这个项目证明什么
 
-GateFix 的核心主张是：agent 能不能自主执行一个动作，不该由"有没有一个确认按钮"决定，
-而该由这个动作**什么时候必须停**（可逆性）、**停下来该看什么证据**（证据是否覆盖四个维度
-Relevance/Coverage/Ordering/Robustness）、以及**谁最终对这个判定负责**（Human_Gate 人机授权）
-共同决定，此外还要单独核算**残余的外部风险**。这份代码把这套判定逻辑做成了四份按 `--case` 动态加载的
-可替换配置（`commits/<case>_commits.yaml` / `bindings/<case>_bindings.yaml` /
+核心主张见开头 TL;DR，这里证明的是它能被拆成可运行代码，不只是一套说法：这份
+代码把判定逻辑做成了四份按 `--case` 动态加载的可替换配置
+（`commits/<case>_commits.yaml` / `bindings/<case>_bindings.yaml` /
 `evidence/<case>_evidence.yaml` / `preconditions/<case>.py`）+ 一个不含场景特定逻辑的引擎
-（`gate.py` + `engine.py`，靠 `importlib` 按 case 名动态导入打分函数）。
+（`gate.py` + `engine.py`，靠 `importlib` 按 case 名动态导入打分函数）——完整的调用关系见开头「项目结构」图。
 
 **如实说明现状**：目前只有 `sydney_move`这一个场景跑通过。上面这套"引擎/配置分离"
 是架构设计、并有 `engine.py` 里的动态加载机制作为支撑，但"换个场景不用改引擎"这句话
@@ -208,18 +201,17 @@ passport）——都是"在推理和真正执行之间插一道独立判定"的�
 对应 `engine.py` 里 ESCALATE/BYPASS_TO_HUMAN 分支）；底部是完整的四态 route 判定式。每个节点右侧
 都标了对应的代码位置——这是一条可以对着真实代码逐节点讲下去的判定链，不是纯理论图。
 
-### 四态自主度谱系 + 领域无关引擎/领域相关配置分层带
+### 四态自主度谱系
 
-![GateFix autonomy spectrum and engine/config layering](docs/autonomy_layering.svg)
+![GateFix autonomy spectrum](docs/autonomy_layering.svg)
 
-上半部分把 PASS / AUTO_REPAIR / ESCALATE / BYPASS_TO_HUMAN 排成一条自主度递减、人工介入递增的
-谱系；下半部分展示"领域无关引擎"（`gate.py` + `engine.py`，任何场景都不改这两个文件）和"领域相关
-配置"（`commits` / `bindings` / `evidence` / `preconditions` 四份文件，换场景就换这几处）之间的
-分层关系——这是对"能不能落地"这个问题最直接的证据（单场景验证现状见上文"这个项目证明什么"）。
+把 PASS / AUTO_REPAIR / ESCALATE / BYPASS_TO_HUMAN 排成一条自主度递减、人工介入递增的谱系——
+判定链（上一张图）回答"这个动作现在能不能放行"，这张图回答"放行结果对应多少自主权、多少人工
+介入"。领域无关引擎和领域相关配置的分层关系不在这张图里重复画了，见开头「项目结构」图。
 
 ### 沙箱验证机制
 
-![GateFix sandbox verification — two real execution traces of the same 8 commits, where they diverge, and the three hardest questions answered on the diagram itself](docs/sandbox_verification.svg)
+![GateFix sandbox verification — two real execution traces of the same 7 commits, where they diverge, and the three hardest questions answered on the diagram itself](docs/sandbox_verification.svg)
 
 这张图不是又一张组件架构图，是同一组 7 个 commit 的**两条真实执行轨迹**，而且两臂拿到的是**完全相同的提案**——都在第 3 步尝试把 `bond_claim_confirm` 提前到两次钥匙交接之前。上面一条有 gate，提案在这一步被硬性拦下，后面 4 步压根没机会发生；下面一条没有 gate，同一个提案直接放行，7 步"全部执行"。两臂共用同一提案是审阅时才修正的：早期草稿让 governed 按正常顺序走、ungoverned 才乱序，导致 governed 的拦截其实来自跟这次实验无关的另一个 ESCALATE 分支，测不到新机制——控制变量改成"提案相同、只切 gate 开关"之后才是真的对比。
 
@@ -307,9 +299,6 @@ python mcp_server/server.py   # stdio transport，接入任何 MCP client 的方
   `score_expectation_setting` 是承诺阶段的内部预检，只给 CLI/agent
   loop/LangGraph 里的人工审核当参考），那个预检结果也不能被外部 MCP client
   当成"已授权"绕开人工审核——人情类的最终决定本来就该直接交给人。
-- **和 CLI/agent loop 共用判定逻辑**：调用的是 `agent/gated_loop.py` 里的
-  `resolve_precondition()`（三态路由 + AUTO_REPAIR + soft_commit 的共享
-  实现，`make_case_gate_fn` 也调它）。
 - **仍然 LLM-free**：这个 server 不调用任何模型/外部 API。
 - 测试见 `tests/test_mcp_server.py`：`@mcp.tool()` 装饰器不改变函数本身
   （直接调用 `authorize(...)` 即可，不需要起 MCP 协议/transport），断言覆盖
@@ -352,7 +341,7 @@ python agent/langgraph_loop.py --case=sydney_move
 │   ├── project_structure.svg                 # 项目结构图：配置层/判定内核/四种部署形态/沙箱验证层/测试，谁依赖谁一次看完
 │   ├── architecture.svg                      # 机制图①：六节点最小骨架 + 公式绑定
 │   ├── decision_chain.svg                    # 机制图②：判定链主干 + 形式化表达 + 完整四态判定式
-│   ├── autonomy_layering.svg                 # 机制图③：四态自主度谱系 + 引擎/配置分层带
+│   ├── autonomy_layering.svg                 # 机制图③：四态自主度谱系（引擎/配置分层见 project_structure.svg）
 │   └── sandbox_verification.svg              # 机制图④：沙箱验证，同一提案两臂对比（已实现，见 world/ + agent/two_arm_experiment.py）
 ├── docs/superpowers/specs/
 │   └── 2026-07-31-two-arm-sandbox-experiment-design.md  # 沙箱验证机制的完整 spec，已实现
