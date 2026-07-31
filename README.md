@@ -183,7 +183,7 @@ passport）——都是"在推理和真正执行之间插一道独立判定"的�
 配置"（`commits` / `bindings` / `evidence` / `preconditions` 四份文件，换场景就换这几处）之间的
 分层关系——这是对"能不能落地"这个问题最直接的证据（单场景验证现状见上文"这个项目证明什么"）。
 
-### 沙箱验证机制（设计阶段，尚未实现）
+### 沙箱验证机制
 
 ![GateFix sandbox verification — two real execution traces of the same 8 commits, where they diverge, and the three hardest questions answered on the diagram itself](docs/sandbox_verification.svg)
 
@@ -193,7 +193,7 @@ passport）——都是"在推理和真正执行之间插一道独立判定"的�
 
 两条轨迹跑完后从 `SandboxWorld.read_state()` 读回的终态，一个自洽、一个自相矛盾——矛盾是从沙箱里独立读出来的事实，不是图自己讲的故事。图的下半部分不是"这张图想说明什么"的自夸，是三个大概率会被审稿人问到的问题（为什么不是统计违规率、为什么不用真 LLM planner、沙箱是否真的独立于 agent）连同诚实答案一起摆出来，参考的是 Rust RFC 的 alternatives/drawbacks、Amazon PR/FAQ 的"最难问题自答"、Nygard ADR 的"决策后必须跟代价"这几种写法的共同点：**不等读者发现弱点，自己先写出来**。
 
-**如实说明现状**：这套机制目前只有 spec（`docs/superpowers/specs/2026-07-31-two-arm-sandbox-experiment-design.md`），还没有代码落地，图里标了"本次范围"和"后续工作"的边界，不代表已经跑通的结论。
+**如实说明现状**：这套机制已经实现并测过（`world/sydney_move_world.py` + `agent/two_arm_experiment.py` + `tests/test_two_arm_experiment.py`），跑 `python agent/two_arm_experiment.py` 能看到实时的两臂对比报告。仍然按 spec 里"Punted"部分列的边界:没接 E2B(进程内实现,还不是真正对 agent 隔离的沙箱)、没接 LangGraph/MCP server(同款插槽,本次没接)、`requires:` 依赖图没有第三方机械校验。
 
 ## 怎么跑
 
@@ -339,20 +339,26 @@ python agent/langgraph_loop.py --case=sydney_move
 │   ├── architecture.svg                      # 机制图①：六节点最小骨架 + 公式绑定
 │   ├── decision_chain.svg                    # 机制图②：判定链主干 + 形式化表达 + 完整四态判定式
 │   ├── autonomy_layering.svg                 # 机制图③：四态自主度谱系 + 引擎/配置分层带
-│   └── sandbox_verification.svg              # 机制图④：沙箱验证（设计阶段，见 docs/superpowers/specs/）
+│   └── sandbox_verification.svg              # 机制图④：沙箱验证，同一提案两臂对比（已实现，见 world/ + agent/two_arm_experiment.py）
 ├── docs/superpowers/specs/
-│   └── 2026-07-31-two-arm-sandbox-experiment-design.md  # 沙箱验证机制的完整 spec，尚未实现
+│   └── 2026-07-31-two-arm-sandbox-experiment-design.md  # 沙箱验证机制的完整 spec，已实现
 ├── gate.py                                   # 引擎核心：GateConfig（阈值/权重）+ GateRecord（判定记录结构）
 │                                              # quality_score / route / is_commit / loop_mode /
 │                                              # expectation_gate / expected_external_risk 六个公式的代码实现
 ├── engine.py                                 # CLI 运行时：按 --case 动态加载下面四处配置→
 │                                              # 打分→三态路由→(AUTO_REPAIR循环)→写回
+├── world/
+│   ├── __init__.py
+│   └── sydney_move_world.py                  # SandboxWorld：记录 commit 真实执行的状态，不做判定
+│                                              # （execute() 检查 requires，缺了照样记录、只是附带抛异常）
 ├── agent/
 │   ├── gated_loop.py                         # reason→gate→act 循环 + resolve_precondition()
 │   │                                          # （三态路由+AUTO_REPAIR+soft_commit 的共享实现，
 │   │                                          # mcp_server/server.py、langgraph_loop.py 也调用它）
-│   └── langgraph_loop.py                     # 同一套编排换成 LangGraph StateGraph 表达，
-│                                              # human_review 节点用 interrupt()/Command(resume=…)
+│   ├── langgraph_loop.py                     # 同一套编排换成 LangGraph StateGraph 表达，
+│   │                                          # human_review 节点用 interrupt()/Command(resume=…)
+│   └── two_arm_experiment.py                 # governed/ungoverned 两臂对比：同一个对抗性提案，
+│                                              # 只切 gate 开关；组合 make_case_gate_fn，不改它
 ├── mcp_server/
 │   └── server.py                             # 把 gate 包成 MCP server：list_precondition_functions /
 │                                              # authorize 两个 tool，判定活证据，不是案例回放
@@ -369,7 +375,8 @@ python agent/langgraph_loop.py --case=sydney_move
 │   ├── test_admission_gate.py                 # precondition 打分函数的准入自检（见上文"不是 benchmark，也不是 LLM judge"）
 │   ├── test_gated_loop.py                     # agent loop 控制流单测 + 真实 sydney_move 数据的端到端断言
 │   ├── test_mcp_server.py                     # MCP tool 的活证据判定测试（真实 AUTO_REPAIR/ESCALATE/soft_commit）
-│   └── test_langgraph_loop.py                  # StateGraph 真实数据端到端：interrupt/resume 不会让非 PASS 变 PASS
+│   ├── test_langgraph_loop.py                  # StateGraph 真实数据端到端：interrupt/resume 不会让非 PASS 变 PASS
+│   └── test_two_arm_experiment.py             # SandboxWorld + 两臂对比：governed 一致 / ungoverned 矛盾，同一提案
 └── gate_record.jsonl                          # 运行后生成的判定记录（可重复生成，已提交一份跑过的样例）
 ```
 
