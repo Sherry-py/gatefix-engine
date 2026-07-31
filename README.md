@@ -51,6 +51,40 @@ Rosebery 公寓远程退租真实发生过的事——包括案例后期新增�
 在真实压力下跑通了的纪律，正式接进这套命名体系，不是反过来先有了名字才去凑一个
 案例。
 
+## 怎么跑
+
+```bash
+pip install pyyaml   # 唯一外部依赖
+python engine.py run --case=sydney_move
+python engine.py run --case=sydney_move --verbose   # 打印每一轮 AUTO_REPAIR 的细节
+```
+
+跑完会在终端看到 7 个 commit 逐条的路由过程，并在 `gate_record.jsonl` 里写一份
+结构化的判定记录（一行一个 JSON，含 R/C/O/Ro/Q/route/notes 等字段，可直接喂给
+下一步的分析或可视化）。
+
+```bash
+pip install pytest    # 跑测试额外需要这个
+pytest -v
+```
+
+测试覆盖两层：`gate.py` 六个公式的单元测试（阈值边界、k_dry 耗尽、expectation_gate
+真值表），以及一个端到端回归测试——跑一遍 sydney_move case，断言 7 个 commit 的
+route 结果跟本 README 里描述的完全一致。改了 `commits/sydney_move_commits.yaml` /
+`preconditions/sydney_move.py` 之后这个测试能立刻告诉你有没有破坏真实案例的判定结果。
+注意这两层测试覆盖的是不同的东西：单元测试验证的是引擎数学本身（对任何场景都该成立），
+回归测试验证的是"sydney_move 这一个场景的判定结果没被意外改坏"——不是"多场景都能跑"，
+后者目前没有测试覆盖，因为目前也只有一个场景。
+
+## 项目结构
+
+![GateFix project structure — config layer, judgment core, four deployment shapes, sandbox verification layer, and the test suite that cross-cuts all of them](docs/project_structure.svg)
+
+这张图是整个仓库"谁依赖谁"的一次性总览：配置层（4 份 `<case>` 专属文件）被判定内核动态
+加载，判定内核被四种部署形态调用，沙箱验证层外挂在 Agent loop 这一个形态上、不碰内核，
+测试横切验证以上每一层。下面每一节都是这张图里某一块的展开——先看图知道自己在找哪一块，
+再往下看细节。
+
 ## 谁可以直接拿来用
 
 - **正在给 agent 加执行前授权闸门、但还没有确定性判定层的团队**——关键
@@ -195,30 +229,9 @@ passport）——都是"在推理和真正执行之间插一道独立判定"的�
 
 **如实说明现状**：这套机制已经实现并测过（`world/sydney_move_world.py` + `agent/two_arm_experiment.py` + `tests/test_two_arm_experiment.py`），跑 `python agent/two_arm_experiment.py` 能看到实时的两臂对比报告。仍然按 spec 里"Punted"部分列的边界:没接 E2B(进程内实现,还不是真正对 agent 隔离的沙箱)、没接 LangGraph/MCP server(同款插槽,本次没接)、`requires:` 依赖图没有第三方机械校验。
 
-## 怎么跑
-
-```bash
-pip install pyyaml   # 唯一外部依赖
-python engine.py run --case=sydney_move
-python engine.py run --case=sydney_move --verbose   # 打印每一轮 AUTO_REPAIR 的细节
-```
-
-跑完会在终端看到 7 个 commit 逐条的路由过程，并在 `gate_record.jsonl` 里写一份
-结构化的判定记录（一行一个 JSON，含 R/C/O/Ro/Q/route/notes 等字段，可直接喂给
-下一步的分析或可视化）。
-
-```bash
-pip install pytest    # 跑测试额外需要这个
-pytest -v
-```
-
-测试覆盖两层：`gate.py` 六个公式的单元测试（阈值边界、k_dry 耗尽、expectation_gate
-真值表），以及一个端到端回归测试——跑一遍 sydney_move case，断言 7 个 commit 的
-route 结果跟本 README 里描述的完全一致。改了 `commits/sydney_move_commits.yaml` /
-`preconditions/sydney_move.py` 之后这个测试能立刻告诉你有没有破坏真实案例的判定结果。
-注意这两层测试覆盖的是不同的东西：单元测试验证的是引擎数学本身（对任何场景都该成立），
-回归测试验证的是"sydney_move 这一个场景的判定结果没被意外改坏"——不是"多场景都能跑"，
-后者目前没有测试覆盖，因为目前也只有一个场景。
+上面四张图分别是内核骨架、判定链、自主度谱系、沙箱验证——运行方式见开头"怎么跑"。
+下面看这套判定逻辑具体怎么接进三种真实部署形态（`python engine.py run` 只是"判一次"，
+不是"接进 agent 循环"）。
 
 ## 三种代码级接入方式
 
@@ -336,6 +349,7 @@ python agent/langgraph_loop.py --case=sydney_move
 ```
 .
 ├── docs/
+│   ├── project_structure.svg                 # 项目结构图：配置层/判定内核/四种部署形态/沙箱验证层/测试，谁依赖谁一次看完
 │   ├── architecture.svg                      # 机制图①：六节点最小骨架 + 公式绑定
 │   ├── decision_chain.svg                    # 机制图②：判定链主干 + 形式化表达 + 完整四态判定式
 │   ├── autonomy_layering.svg                 # 机制图③：四态自主度谱系 + 引擎/配置分层带
