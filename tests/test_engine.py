@@ -1,5 +1,5 @@
 """Tests for the GateFix engine: gate.py formula unit tests + a full
-sydney_move case regression test (asserts the 8 commits route exactly as
+sydney_move case regression test (asserts the 7 commits route exactly as
 described in README.md — this is the guard against silently breaking the
 real case data or the precondition scoring functions)."""
 
@@ -119,7 +119,6 @@ EXPECTED_ROUTES = {
     "key_to_agent": "PASS",
     "bond_claim_confirm": "ESCALATE",
     "friend_compensation": "BYPASS_TO_HUMAN",
-    "expectation_setting": "PASS",
     "air_freight_dispatch": "PASS",
 }
 
@@ -138,9 +137,17 @@ def test_sydney_move_case_reproduces_expected_routes():
     risk_record = next(r for r in records if r["commit_id"] == "air_freight_dispatch")
     assert risk_record["risk_ext"] == GateConfig.expected_external_risk(0.15, 1240)
 
-    # friend_compensation is bypassed to human, never scored on the 4D-CQ axes.
+    # friend_compensation is bypassed to human, never scored on the 4D-CQ axes —
+    # but it merges two real stages of the same story (promise, then payout after
+    # the resale plan fell through), so its final route must still be BYPASS_TO_HUMAN
+    # even though the promise-stage precondition_fn (score_expectation_setting) PASSes
+    # on its own. The pre-check result must show up in notes for the audit trail, but
+    # must never be able to flip the final route.
     bypass_record = next(r for r in records if r["commit_id"] == "friend_compensation")
     assert bypass_record["bypassed_to_human"] is True
+    assert bypass_record["route"] == "BYPASS_TO_HUMAN"
+    assert "承诺阶段" in bypass_record["notes"]
+    assert "实付阶段" in bypass_record["notes"]
 
 
 # ---------- _resolve_regular_commit: AUTO_REPAIR must never leak out as a final route ----------

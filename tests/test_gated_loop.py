@@ -127,14 +127,20 @@ def test_real_case_gate_fn_escalates_bond_claim_confirm():
 
 
 def test_real_case_gate_fn_bypasses_friend_compensation():
+    """friend_compensation merges two real stages of the same story (a promise,
+    then a payout after the resale plan fell through) — its promise-stage
+    precondition_fn (score_expectation_setting) PASSes on the real evidence,
+    but that must only show up in reason, never flip the route away from
+    BYPASS_TO_HUMAN (the payout decision is inherently human judgment)."""
     gate_fn = make_case_gate_fn("sydney_move")
     result = gate_fn("sydney_move", {"commit_id": "friend_compensation"})
     assert result.route == "BYPASS_TO_HUMAN"
+    assert "承诺阶段" in result.reason
 
 
 def test_real_case_loop_halts_at_bond_claim_without_calling_tool():
     """End-to-end with the real gate_fn/reason_fn/tool_fn: the loop must walk
-    the real 8-commit sequence, execute the first four (all real PASS/
+    the real 7-commit sequence, execute the first four (all real PASS/
     AUTO_REPAIR->PASS results), and halt at bond_claim_confirm (ESCALATE)
     without ever invoking tool_fn for it."""
     executed = []

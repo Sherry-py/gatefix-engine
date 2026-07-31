@@ -17,31 +17,38 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from mcp_server.server import authorize, list_precondition_functions
 
 
-def test_list_precondition_functions_covers_all_seven():
+def test_list_precondition_functions_covers_all_six():
+    """score_expectation_setting exists in REGISTRY (it's friend_compensation's
+    promise-stage pre-check) but is deliberately excluded here — see
+    test_list_precondition_functions_excludes_bypass_to_human."""
     fns = list_precondition_functions("sydney_move")
     names = {f["precondition_fn"] for f in fns}
     assert names == {
         "score_discard_items", "score_physical_handover",
         "score_key_to_building_manager", "score_key_to_agent",
-        "score_bond_claim", "score_expectation_setting",
-        "score_air_freight_dispatch",
+        "score_bond_claim", "score_air_freight_dispatch",
     }
 
 
 def test_list_precondition_functions_excludes_bypass_to_human():
-    """friend_compensation has no precondition_fn (bypass_to_human) — it
-    must not appear here, and it must be impossible to "authorize" it via
-    evidence, since that's precisely the point of bypass_to_human."""
+    """friend_compensation has bypass_to_human=True — even though it also
+    carries a precondition_fn (score_expectation_setting, its promise-stage
+    pre-check), it must not appear here, and it must be impossible to
+    "authorize" it via evidence, since that's precisely the point of
+    bypass_to_human: the payout decision is inherently human judgment, and
+    the pre-check passing must never be mistaken for the commit itself being
+    authorized."""
     fns = list_precondition_functions("sydney_move")
     commit_ids = {f["commit_id"] for f in fns}
+    fn_names = {f["precondition_fn"] for f in fns}
     assert "friend_compensation" not in commit_ids
+    assert "score_expectation_setting" not in fn_names
 
 
 def test_list_precondition_functions_flags_auto_repair_and_soft_commit():
     fns = {f["precondition_fn"]: f for f in list_precondition_functions("sydney_move")}
     assert fns["score_key_to_agent"]["has_auto_repair"] is True
     assert fns["score_bond_claim"]["has_auto_repair"] is False
-    assert fns["score_expectation_setting"]["soft_commit"] is True
     assert fns["score_discard_items"]["soft_commit"] is False
 
 
@@ -100,24 +107,25 @@ def test_authorize_mismatched_refund_account_escalates_and_is_not_authorized():
     assert result["authorized"] is False
 
 
-def test_authorize_soft_commit_unsupported_promise_is_blocked():
-    result = authorize("sydney_move", "score_expectation_setting", {
-        "promised_amount": 5000,
-        "feasibility_probe_done": False,
-        "feasibility_evidence": "",
-    })
-    assert result["route"] == "ESCALATE"
-    assert result["authorized"] is False
-
-
-def test_authorize_soft_commit_supported_promise_passes():
-    result = authorize("sydney_move", "score_expectation_setting", {
-        "promised_amount": 500,
-        "feasibility_probe_done": True,
-        "feasibility_evidence": "friend quote reference",
-    })
-    assert result["route"] == "PASS"
-    assert result["authorized"] is True
+def test_authorize_rejects_bypass_to_human_precondition_fn():
+    """score_expectation_setting is friend_compensation's promise-stage
+    pre-check, not an independently authorizable function — friend_compensation
+    is bypass_to_human, so the actual payout decision must always go through a
+    human, regardless of what the pre-check scores. authorize() must refuse to
+    run it at all, not silently return a route an external client could
+    mistake for "this commit is authorized." This is the regression test for
+    the exact gap that would reopen if _case_precondition_index() ever stopped
+    excluding bypass_to_human commits' precondition_fn."""
+    try:
+        authorize("sydney_move", "score_expectation_setting", {
+            "promised_amount": 500,
+            "feasibility_probe_done": True,
+            "feasibility_evidence": "friend quote reference",
+        })
+        assert False, "expected ValueError"
+    except ValueError as e:
+        assert "score_expectation_setting" in str(e)
+        assert "bypass_to_human" in str(e)
 
 
 def test_authorize_auto_repair_band_without_repair_fn_escalates_not_auto_repair():

@@ -33,10 +33,17 @@ bond_claim_confirm:
   client_name: "委托人本人（Client）"        # 委托人本人——两者不一致，这是真实的 RBO 案例
   refund_account_still_active: true
 
-expectation_setting:
+friend_compensation:
+  # 阶段一（承诺）：委托人对朋友承诺的分账金额，先问朋友（报价参考）造基准价
   promised_amount: 1000
-  feasibility_probe_done: true          # 先问朋友（报价参考）造基准价
+  feasibility_probe_done: true
   feasibility_evidence: "朋友报价参考（Friend quote）+ 二手交易平台挂单反馈"
+  # 阶段二（实付，人情类，仅供 notes 参考，不参与打分）：分账计划落空后的
+  # 真实结清方式——旧物短期卖不掉，改成免费挂网、请能一次性搬走所有旧物的
+  # 人来处理，原定的按比例分账没有了着落
+  actual_settlement_amount: 388
+  actual_settlement_form: "现金 + 实物"
+  settlement_reason: "旧物短期内无法卖出，改为免费挂网请人一次性搬走，原分账计划落空"
 
 air_freight_dispatch:
   box_count: 10

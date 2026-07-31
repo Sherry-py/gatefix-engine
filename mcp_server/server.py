@@ -15,12 +15,16 @@ mcp_server/server.py —— 把 GateFix 的 4D-CQ gate 包成一个 MCP server�
 这是"活证据"版本，不是案例回放：evidence 由调用方（任何 MCP client）在每
 次调用时提供，不读 evidence/sydney_move_evidence.yaml 里的静态数据，所以
 能真的挡在别的 agent 动作前面——前提是那个动作的证据形状匹配
-preconditions/sydney_move.py 里某个已有的打分函数；只认得这 7 个，不是
-能判断任意领域动作的通用 gate。
+preconditions/sydney_move.py 里某个已有的打分函数；只认得这 6 个可独立
+授权的，不是能判断任意领域动作的通用 gate。
 
-bypass_to_human 的 commit（如 friend_compensation）没有 precondition_fn，
-不会出现在 list_precondition_functions 里，也没法通过 authorize() 判定——
-人情类证据本来就该直接交给人，不该假装能被 evidence-based gate 自动判定。
+bypass_to_human 的 commit（如 friend_compensation）不会出现在
+list_precondition_functions 里，也没法通过 authorize() 判定——即使它自己
+也带一个 precondition_fn（friend_compensation 的 score_expectation_setting
+是承诺阶段的内部预检，只在 CLI/agent-loop/LangGraph 里用，给最终人工决定
+当参考），那个预检结果也不能被外部 client 当成"已授权"绕开人工审核，所以
+_case_precondition_index() 显式把它排除在外，authorize() 也会拒绝调用它。
+人情类的最终决定本来就该直接交给人，预检只是参考，不是判定。
 
 仍然是 LLM-free、确定性：不调用任何模型/外部 API，判定过程和 CLI/agent
 loop 完全一样可审计、可复现。
@@ -47,14 +51,17 @@ mcp = FastMCP("gatefix-gate")
 
 def _case_precondition_index(case: str) -> dict:
     """precondition_fn -> {commit_id, name_cn, soft_commit} 的映射，从
-    commits/<case>_commits.yaml 里真实读出来（不是编的）。bypass_to_human
-    的 commit 没有 precondition_fn 字段，天然不会进这个索引。"""
+    commits/<case>_commits.yaml 里真实读出来（不是编的）。commit 没有
+    precondition_fn 字段的自然不进这个索引；commit 带 bypass_to_human 的
+    也显式排除——即使它同时带了 precondition_fn（比如 friend_compensation
+    的承诺阶段预检），那也只是内部参考，不能被外部 MCP client 当成可以
+    独立 authorize() 的东西，绕过人工审核。"""
     commits_path = BASE_DIR / "commits" / f"{case}_commits.yaml"
     commits = load_yaml(commits_path)["commits"]
     index = {}
     for c in commits:
         fn_name = c.get("precondition_fn")
-        if fn_name:
+        if fn_name and not c.get("bypass_to_human"):
             index[fn_name] = {
                 "commit_id": c["id"],
                 "name_cn": c["name_cn"],
@@ -103,8 +110,15 @@ def authorize(case: str, precondition_fn: str, evidence: dict) -> dict:
             f"unknown precondition_fn={precondition_fn!r} for case={case!r}; "
             "call list_precondition_functions first to see what's available"
         )
+    if precondition_fn not in index:
+        raise ValueError(
+            f"{precondition_fn!r} belongs to a bypass_to_human commit and "
+            "cannot be authorized via evidence alone — call "
+            "list_precondition_functions first; that commit must go through "
+            "human review, this tool will not approve it for you"
+        )
 
-    meta = index.get(precondition_fn, {})
+    meta = index[precondition_fn]
     score_fn = module.REGISTRY[precondition_fn]
     repair_fn = getattr(module, "REPAIR_REGISTRY", {}).get(precondition_fn)
 

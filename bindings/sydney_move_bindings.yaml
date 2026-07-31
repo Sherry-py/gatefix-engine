@@ -36,15 +36,9 @@ bindings:
 
   friend_compensation:
     executor_type: human
-    executor: "朋友"
-    channel: "微信"
-    incentive: "收益分成失败后现金+实物结清"
-
-  expectation_setting:
-    executor_type: human
-    executor: "委托人本人"
-    channel: "微信消息"
-    incentive: "N/A——这是委托人自己要过 gate 的言语行为"
+    executor: "委托人本人（承诺阶段）→ 朋友（补偿执行阶段）"
+    channel: "微信消息（承诺）→ 微信（实付）"
+    incentive: "承诺阶段 N/A——委托人自己要过 gate 的言语行为；分成落空后改现金+实物结清"
 
   air_freight_dispatch:
     executor_type: human
