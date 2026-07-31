@@ -16,8 +16,10 @@ to "a person executes one step, and needs to know whether to stop." This
 repo is a small, runnable engine (`gate.py` + `engine.py`, ~250 lines, one
 dependency) that encodes that decision rule and runs it end-to-end on the
 real case it came from: a 7-commit, cross-border, remote lease-termination
-in Sydney, with real dollar amounts and real third-party executors (names
-replaced with role labels, facts kept real). `python engine.py run
+in Sydney, with real third-party executors (names replaced with role
+labels) and a real decision structure (this repo is public on GitHub, so
+exact dollar amounts and the precise location are generalized — see "Case
+notes" at the end). `python engine.py run
 --case=sydney_move` reproduces all 7 routing decisions deterministically —
 no LLM call needed, the decision logic itself is the point.
 
@@ -33,23 +35,53 @@ no LLM call needed, the decision logic itself is the point.
 "这事儿机器判不了、直接交给人"四种结果——全部对应真实发生过的事，不是编的。
 
 这不是一个抽象 demo。`evidence/sydney_move_evidence.yaml` 里的每一条都是这次悉尼
-Rosebery 公寓远程退租真实发生过的事——包括案例后期新增的空运纸箱加固决策和关税不确定性。
-代码跑的是真实数据，不是虚构 case。第三方（中介、楼管、货代等）的姓名已替换为身份角色标注，
-金额与事实细节保留真实。
+公寓远程退租真实发生过的事——包括案例后期新增的空运纸箱加固决策和关税不确定性。
+代码跑的是真实事实结构，不是虚构 case。第三方（中介、楼管、货代等）的姓名已替换为
+身份角色标注，具体地点和金额已泛化处理（GitHub 是公开仓库，不展示可能定位到个人的
+精确地点和真实财务数字）；决策路径、证据缺口、路由结果这些结构性事实保留真实。
 
-**如实说明出发点**：这套方法论不是先做了一个 AI agent、再想办法管它——它是从
-一次真实业务流程（悉尼退租）的执行前治理需求里提炼出来的，原始场景里做决策的
-是真人。AI agent 治理是这套方法论自然覆盖的一种情况，不是它的起点：只要"谁在
-执行下一步"这个问题存在（不管执行者是人、脚本还是 agent），判定逻辑关心的都是
-同一件事——证据够不够格放行。
+**如实说明出发点**：这套方法论不是先做了一个 AI agent、再想办法管它，也不是照
+着行业框架图设计出来的——它是这次真实退租案例逼出来的：7 个决策点里有好几个一
+旦做错就无法挽回（钥匙一旦移交、纸箱一旦交运海关就不受控），当时唯一能安全推进
+的办法就是给每一步定死"什么证据够、什么证据不够"，过了才能进下一步。这套判定
+纪律先于"Agent Harness""Guardrails"这些说法存在，GateFix 只是把一套已经在真实
+压力下跑通的纪律，接进了行业最近才有的命名体系。AI agent 治理是它自然覆盖的一
+种情况，不是起点：只要"谁在执行下一步"这个问题存在（人、脚本还是 agent），判定
+逻辑关心的都是同一件事——证据够不够格放行。
 
-这套 Guardrails 层的形态不是照着行业框架图设计出来的，是这次真实退租案例逼出来
-的：7 个决策点里有好几个一旦做错就无法挽回（钥匙一旦移交、纸箱一旦交运海关就不
-受控），当时唯一能安全推进的办法就是给每一步定死"什么证据够、什么证据不够"，
-过了才能进下一步。这套判定纪律先于"Agent Harness""Guardrails"这些说法存在——
-行业最近才把这类"执行前拦一道"的做法归了类、起了名字，GateFix 是把一套原本就
-在真实压力下跑通了的纪律，正式接进这套命名体系，不是反过来先有了名字才去凑一个
-案例。
+## 怎么跑
+
+```bash
+pip install pyyaml   # 唯一外部依赖
+python engine.py run --case=sydney_move
+python engine.py run --case=sydney_move --verbose   # 打印每一轮 AUTO_REPAIR 的细节
+```
+
+跑完会在终端看到 7 个 commit 逐条的路由过程，并在 `gate_record.jsonl` 里写一份
+结构化的判定记录（一行一个 JSON，含 R/C/O/Ro/Q/route/notes 等字段，可直接喂给
+下一步的分析或可视化）。
+
+```bash
+pip install pytest    # 跑测试额外需要这个
+pytest -v
+```
+
+测试覆盖两层：`gate.py` 六个公式的单元测试（阈值边界、k_dry 耗尽、expectation_gate
+真值表），以及一个端到端回归测试——跑一遍 sydney_move case，断言 7 个 commit 的
+route 结果跟本 README 里描述的完全一致。改了 `commits/sydney_move_commits.yaml` /
+`preconditions/sydney_move.py` 之后这个测试能立刻告诉你有没有破坏真实案例的判定结果。
+注意这两层测试覆盖的是不同的东西：单元测试验证的是引擎数学本身（对任何场景都该成立），
+回归测试验证的是"sydney_move 这一个场景的判定结果没被意外改坏"——不是"多场景都能跑"，
+后者目前没有测试覆盖，因为目前也只有一个场景。
+
+## 项目结构
+
+![GateFix project structure — config layer, judgment core, four deployment shapes, sandbox verification layer, and the test suite that cross-cuts all of them](docs/project_structure.svg)
+
+这张图是整个仓库"谁依赖谁"的一次性总览：配置层（4 份 `<case>` 专属文件）被判定内核动态
+加载，判定内核被四种部署形态调用，沙箱验证层外挂在 Agent loop 这一个形态上、不碰内核，
+测试横切验证以上每一层。下面每一节都是这张图里某一块的展开——先看图知道自己在找哪一块，
+再往下看细节。
 
 ## 谁可以直接拿来用
 
@@ -69,13 +101,11 @@ Rosebery 公寓远程退租真实发生过的事——包括案例后期新增�
 
 ## 这个项目证明什么
 
-GateFix 的核心主张是：agent 能不能自主执行一个动作，不该由"有没有一个确认按钮"决定，
-而该由这个动作**什么时候必须停**（可逆性）、**停下来该看什么证据**（证据是否覆盖四个维度
-Relevance/Coverage/Ordering/Robustness）、以及**谁最终对这个判定负责**（Human_Gate 人机授权）
-共同决定，此外还要单独核算**残余的外部风险**。这份代码把这套判定逻辑做成了四份按 `--case` 动态加载的
-可替换配置（`commits/<case>_commits.yaml` / `bindings/<case>_bindings.yaml` /
+核心主张见开头 TL;DR，这里证明的是它能被拆成可运行代码，不只是一套说法：这份
+代码把判定逻辑做成了四份按 `--case` 动态加载的可替换配置
+（`commits/<case>_commits.yaml` / `bindings/<case>_bindings.yaml` /
 `evidence/<case>_evidence.yaml` / `preconditions/<case>.py`）+ 一个不含场景特定逻辑的引擎
-（`gate.py` + `engine.py`，靠 `importlib` 按 case 名动态导入打分函数）。
+（`gate.py` + `engine.py`，靠 `importlib` 按 case 名动态导入打分函数）——完整的调用关系见开头「项目结构」图。
 
 **如实说明现状**：目前只有 `sydney_move`这一个场景跑通过。上面这套"引擎/配置分离"
 是架构设计、并有 `engine.py` 里的动态加载机制作为支撑，但"换个场景不用改引擎"这句话
@@ -96,7 +126,8 @@ Relevance/Coverage/Ordering/Robustness）、以及**谁最终对这个判定负�
   先承诺按比例分账，旧物短期卖不掉、分账落空后改现金+实物结清；承诺阶段有客观证据，
   单独走一次 `expectation_gate` 预检并记录在案，但预检结果不会、也不能替最终的人工补偿决定拍板）。
 - **外部或有闸门 Risk_ext**：`air_freight_dispatch`（空运纸箱交运）这一条即使 route=PASS，
-  引擎仍会额外报告 `Risk_ext = p_inspect × Loss(a∣inspected) = 0.15 × 1240 ≈ ¥186`——
+  引擎仍会额外报告 `Risk_ext = p_inspect × Loss(a∣inspected)`（抽查概率 × 抽查后估损，
+  具体数字用代表性量级，不展示真实估损金额）——
   这是本框架这次新增的理论点：**Commit(a,E)=True 不代表总成本已确定**，
   海关抽查这类第三方裁量风险不会因为 gate 放行就清零。
 
@@ -136,7 +167,7 @@ passport）——都是"在推理和真正执行之间插一道独立判定"的�
   断言前者的 `route()` 不能是 PASS、后者必须是 PASS。
 - **Q 与风险大小正交**：4D-CQ 质量分只判断证据本身够不够格，不看金额或可逆性——
   那部分由 `IsCommit`/`LoopMode`/`Risk_ext` 单独处理，同一条 τ_pass=0.85 同时
-  用于 ¥50 的"扔弃物品"和 ¥17,100 的"空运纸箱交运"。
+  用于"扔弃物品"这种小额动作和"空运纸箱交运"这种金额差出几个数量级的动作。
 - **评估对象不同**：WorkBuddy Bench 是事后能力评估——任务跑完后打分，衡量
   agent 能不能独立完成整个任务。GateFix 是事中风险拦截——判断某个具体动作
   在变得不可逆之前能不能自动放行。二者可以在同一个生产系统里叠加，不是
@@ -174,18 +205,17 @@ passport）——都是"在推理和真正执行之间插一道独立判定"的�
 对应 `engine.py` 里 ESCALATE/BYPASS_TO_HUMAN 分支）；底部是完整的四态 route 判定式。每个节点右侧
 都标了对应的代码位置——这是一条可以对着真实代码逐节点讲下去的判定链，不是纯理论图。
 
-### 四态自主度谱系 + 领域无关引擎/领域相关配置分层带
+### 四态自主度谱系
 
-![GateFix autonomy spectrum and engine/config layering](docs/autonomy_layering.svg)
+![GateFix autonomy spectrum](docs/autonomy_layering.svg)
 
-上半部分把 PASS / AUTO_REPAIR / ESCALATE / BYPASS_TO_HUMAN 排成一条自主度递减、人工介入递增的
-谱系；下半部分展示"领域无关引擎"（`gate.py` + `engine.py`，任何场景都不改这两个文件）和"领域相关
-配置"（`commits` / `bindings` / `evidence` / `preconditions` 四份文件，换场景就换这几处）之间的
-分层关系——这是对"能不能落地"这个问题最直接的证据（单场景验证现状见上文"这个项目证明什么"）。
+把 PASS / AUTO_REPAIR / ESCALATE / BYPASS_TO_HUMAN 排成一条自主度递减、人工介入递增的谱系——
+判定链（上一张图）回答"这个动作现在能不能放行"，这张图回答"放行结果对应多少自主权、多少人工
+介入"。领域无关引擎和领域相关配置的分层关系不在这张图里重复画了，见开头「项目结构」图。
 
-### 沙箱验证机制（设计阶段，尚未实现）
+### 沙箱验证机制
 
-![GateFix sandbox verification — two real execution traces of the same 8 commits, where they diverge, and the three hardest questions answered on the diagram itself](docs/sandbox_verification.svg)
+![GateFix sandbox verification — two real execution traces of the same 7 commits, where they diverge, and the three hardest questions answered on the diagram itself](docs/sandbox_verification.svg)
 
 这张图不是又一张组件架构图，是同一组 7 个 commit 的**两条真实执行轨迹**，而且两臂拿到的是**完全相同的提案**——都在第 3 步尝试把 `bond_claim_confirm` 提前到两次钥匙交接之前。上面一条有 gate，提案在这一步被硬性拦下，后面 4 步压根没机会发生；下面一条没有 gate，同一个提案直接放行，7 步"全部执行"。两臂共用同一提案是审阅时才修正的：早期草稿让 governed 按正常顺序走、ungoverned 才乱序，导致 governed 的拦截其实来自跟这次实验无关的另一个 ESCALATE 分支，测不到新机制——控制变量改成"提案相同、只切 gate 开关"之后才是真的对比。
 
@@ -193,32 +223,11 @@ passport）——都是"在推理和真正执行之间插一道独立判定"的�
 
 两条轨迹跑完后从 `SandboxWorld.read_state()` 读回的终态，一个自洽、一个自相矛盾——矛盾是从沙箱里独立读出来的事实，不是图自己讲的故事。图的下半部分不是"这张图想说明什么"的自夸，是三个大概率会被审稿人问到的问题（为什么不是统计违规率、为什么不用真 LLM planner、沙箱是否真的独立于 agent）连同诚实答案一起摆出来，参考的是 Rust RFC 的 alternatives/drawbacks、Amazon PR/FAQ 的"最难问题自答"、Nygard ADR 的"决策后必须跟代价"这几种写法的共同点：**不等读者发现弱点，自己先写出来**。
 
-**如实说明现状**：这套机制目前只有 spec（`docs/superpowers/specs/2026-07-31-two-arm-sandbox-experiment-design.md`），还没有代码落地，图里标了"本次范围"和"后续工作"的边界，不代表已经跑通的结论。
+**如实说明现状**：这套机制已经实现并测过（`world/sydney_move_world.py` + `agent/two_arm_experiment.py` + `tests/test_two_arm_experiment.py`），跑 `python agent/two_arm_experiment.py` 能看到实时的两臂对比报告。仍然按 spec 里"Punted"部分列的边界:没接 E2B(进程内实现,还不是真正对 agent 隔离的沙箱)、没接 LangGraph/MCP server(同款插槽,本次没接)、`requires:` 依赖图没有第三方机械校验。
 
-## 怎么跑
-
-```bash
-pip install pyyaml   # 唯一外部依赖
-python engine.py run --case=sydney_move
-python engine.py run --case=sydney_move --verbose   # 打印每一轮 AUTO_REPAIR 的细节
-```
-
-跑完会在终端看到 7 个 commit 逐条的路由过程，并在 `gate_record.jsonl` 里写一份
-结构化的判定记录（一行一个 JSON，含 R/C/O/Ro/Q/route/notes 等字段，可直接喂给
-下一步的分析或可视化）。
-
-```bash
-pip install pytest    # 跑测试额外需要这个
-pytest -v
-```
-
-测试覆盖两层：`gate.py` 六个公式的单元测试（阈值边界、k_dry 耗尽、expectation_gate
-真值表），以及一个端到端回归测试——跑一遍 sydney_move case，断言 7 个 commit 的
-route 结果跟本 README 里描述的完全一致。改了 `commits/sydney_move_commits.yaml` /
-`preconditions/sydney_move.py` 之后这个测试能立刻告诉你有没有破坏真实案例的判定结果。
-注意这两层测试覆盖的是不同的东西：单元测试验证的是引擎数学本身（对任何场景都该成立），
-回归测试验证的是"sydney_move 这一个场景的判定结果没被意外改坏"——不是"多场景都能跑"，
-后者目前没有测试覆盖，因为目前也只有一个场景。
+上面四张图分别是内核骨架、判定链、自主度谱系、沙箱验证——运行方式见开头"怎么跑"。
+下面看这套判定逻辑具体怎么接进三种真实部署形态（`python engine.py run` 只是"判一次"，
+不是"接进 agent 循环"）。
 
 ## 三种代码级接入方式
 
@@ -294,9 +303,6 @@ python mcp_server/server.py   # stdio transport，接入任何 MCP client 的方
   `score_expectation_setting` 是承诺阶段的内部预检，只给 CLI/agent
   loop/LangGraph 里的人工审核当参考），那个预检结果也不能被外部 MCP client
   当成"已授权"绕开人工审核——人情类的最终决定本来就该直接交给人。
-- **和 CLI/agent loop 共用判定逻辑**：调用的是 `agent/gated_loop.py` 里的
-  `resolve_precondition()`（三态路由 + AUTO_REPAIR + soft_commit 的共享
-  实现，`make_case_gate_fn` 也调它）。
 - **仍然 LLM-free**：这个 server 不调用任何模型/外部 API。
 - 测试见 `tests/test_mcp_server.py`：`@mcp.tool()` 装饰器不改变函数本身
   （直接调用 `authorize(...)` 即可，不需要起 MCP 协议/transport），断言覆盖
@@ -336,23 +342,30 @@ python agent/langgraph_loop.py --case=sydney_move
 ```
 .
 ├── docs/
+│   ├── project_structure.svg                 # 项目结构图：配置层/判定内核/四种部署形态/沙箱验证层/测试，谁依赖谁一次看完
 │   ├── architecture.svg                      # 机制图①：六节点最小骨架 + 公式绑定
 │   ├── decision_chain.svg                    # 机制图②：判定链主干 + 形式化表达 + 完整四态判定式
-│   ├── autonomy_layering.svg                 # 机制图③：四态自主度谱系 + 引擎/配置分层带
-│   └── sandbox_verification.svg              # 机制图④：沙箱验证（设计阶段，见 docs/superpowers/specs/）
+│   ├── autonomy_layering.svg                 # 机制图③：四态自主度谱系（引擎/配置分层见 project_structure.svg）
+│   └── sandbox_verification.svg              # 机制图④：沙箱验证，同一提案两臂对比（已实现，见 world/ + agent/two_arm_experiment.py）
 ├── docs/superpowers/specs/
-│   └── 2026-07-31-two-arm-sandbox-experiment-design.md  # 沙箱验证机制的完整 spec，尚未实现
+│   └── 2026-07-31-two-arm-sandbox-experiment-design.md  # 沙箱验证机制的完整 spec，已实现
 ├── gate.py                                   # 引擎核心：GateConfig（阈值/权重）+ GateRecord（判定记录结构）
 │                                              # quality_score / route / is_commit / loop_mode /
 │                                              # expectation_gate / expected_external_risk 六个公式的代码实现
 ├── engine.py                                 # CLI 运行时：按 --case 动态加载下面四处配置→
 │                                              # 打分→三态路由→(AUTO_REPAIR循环)→写回
+├── world/
+│   ├── __init__.py
+│   └── sydney_move_world.py                  # SandboxWorld：记录 commit 真实执行的状态，不做判定
+│                                              # （execute() 检查 requires，缺了照样记录、只是附带抛异常）
 ├── agent/
 │   ├── gated_loop.py                         # reason→gate→act 循环 + resolve_precondition()
 │   │                                          # （三态路由+AUTO_REPAIR+soft_commit 的共享实现，
 │   │                                          # mcp_server/server.py、langgraph_loop.py 也调用它）
-│   └── langgraph_loop.py                     # 同一套编排换成 LangGraph StateGraph 表达，
-│                                              # human_review 节点用 interrupt()/Command(resume=…)
+│   ├── langgraph_loop.py                     # 同一套编排换成 LangGraph StateGraph 表达，
+│   │                                          # human_review 节点用 interrupt()/Command(resume=…)
+│   └── two_arm_experiment.py                 # governed/ungoverned 两臂对比：同一个对抗性提案，
+│                                              # 只切 gate 开关；组合 make_case_gate_fn，不改它
 ├── mcp_server/
 │   └── server.py                             # 把 gate 包成 MCP server：list_precondition_functions /
 │                                              # authorize 两个 tool，判定活证据，不是案例回放
@@ -369,7 +382,8 @@ python agent/langgraph_loop.py --case=sydney_move
 │   ├── test_admission_gate.py                 # precondition 打分函数的准入自检（见上文"不是 benchmark，也不是 LLM judge"）
 │   ├── test_gated_loop.py                     # agent loop 控制流单测 + 真实 sydney_move 数据的端到端断言
 │   ├── test_mcp_server.py                     # MCP tool 的活证据判定测试（真实 AUTO_REPAIR/ESCALATE/soft_commit）
-│   └── test_langgraph_loop.py                  # StateGraph 真实数据端到端：interrupt/resume 不会让非 PASS 变 PASS
+│   ├── test_langgraph_loop.py                  # StateGraph 真实数据端到端：interrupt/resume 不会让非 PASS 变 PASS
+│   └── test_two_arm_experiment.py             # SandboxWorld + 两臂对比：governed 一致 / ungoverned 矛盾，同一提案
 └── gate_record.jsonl                          # 运行后生成的判定记录（可重复生成，已提交一份跑过的样例）
 ```
 
@@ -392,3 +406,11 @@ up through a six-step methodology (jurisdiction grounding → inherited-
 liability assessment → commit backward-chaining → executor binding → cheap
 reversible probing → evidence-package gating → custody chain → settlement
 audit). Those notes are private working material, not a publication.
+
+This repo is public on GitHub. Third-party names were already replaced with
+role labels from the start; on top of that, this pass removed the exact
+suburb (kept at city level: Sydney) and replaced every dollar amount with a
+`low`/`mid`/`high` magnitude tier (`engine.py::VALUE_TIER_SCALE`) or a
+round representative number — decision structure, routing outcomes, and
+evidence gaps are unchanged, only the numbers and precise location are
+generalized.

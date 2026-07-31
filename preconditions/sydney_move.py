@@ -136,7 +136,7 @@ def score_expectation_setting(evidence: dict) -> dict:
     return dict(
         R=R, C=C, O=O, Ro=Ro,
         verifiable_ext=True,
-        notes=f"承诺金额={evidence.get('promised_amount')}；可实现性证据={evidence.get('feasibility_evidence', '无')}",
+        notes=f"承诺金额量级={evidence.get('promised_amount_tier')}；可实现性证据={evidence.get('feasibility_evidence', '无')}",
         contains_promise=True,
         has_feasibility_evidence=has_evidence,
     )

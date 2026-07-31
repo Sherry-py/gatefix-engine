@@ -1,6 +1,7 @@
 # evidence/sydney_move_evidence.yaml —— 每个 commit 对应的真实/贴近真实的证据快照
-# 这不是造的假数据——数值和事实来自案例文档，包括故意保留了两个真实发生过的"证据不足"场景
+# 事实结构不是编的——包括故意保留了两个真实发生过的"证据不足"场景
 # （RBO 账户户名不符 / 钥匙数量首次核对不全），用来验证 gate 是否真的会正确路由到 ESCALATE / AUTO_REPAIR。
+# GitHub 是公开仓库：涉及金额的字段一律用 low/mid/high 量级标注或代表性数字，不展示真实财务数字。
 
 discard_items:
   friend_selected_done: true
@@ -35,13 +36,14 @@ bond_claim_confirm:
 
 friend_compensation:
   # 阶段一（承诺）：委托人对朋友承诺的分账金额，先问朋友（报价参考）造基准价
-  promised_amount: 1000
+  # GitHub 公开仓库，金额按 low/mid/high 量级标注，不展示真实数字
+  promised_amount_tier: mid
   feasibility_probe_done: true
   feasibility_evidence: "朋友报价参考（Friend quote）+ 二手交易平台挂单反馈"
   # 阶段二（实付，人情类，仅供 notes 参考，不参与打分）：分账计划落空后的
   # 真实结清方式——旧物短期卖不掉，改成免费挂网、请能一次性搬走所有旧物的
   # 人来处理，原定的按比例分账没有了着落
-  actual_settlement_amount: 388
+  actual_settlement_tier: low
   actual_settlement_form: "现金 + 实物"
   settlement_reason: "旧物短期内无法卖出，改为免费挂网请人一次性搬走，原分账计划落空"
 
@@ -51,5 +53,5 @@ air_freight_dispatch:
   cracked_boxes_count: 1
   reinforced_boxes_count: 4            # 加固决策：剩余 4 箱已加固
   overweight_kg: 11
-  weight_charge_verified: true          # 11kg*80=880，已核实计算无误
-  balance_formula_verified: true        # 6061+5*1155=11836，+880-500-800=11416，已核实
+  weight_charge_verified: true          # 超重费按单价×超重公斤数核实，计算无误（真实计费明细不展示）
+  balance_formula_verified: true        # 尾款结算公式（基础运费+加固费-已付款项）已核实，真实数字不展示

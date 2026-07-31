@@ -1,0 +1,124 @@
+<svg viewBox="0 0 1500 1150" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<marker id="ps-arrM" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6B6B68"/></marker>
+<marker id="ps-arrGr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2F6B44"/></marker>
+<marker id="ps-arrTeal" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2E9C8F"/></marker>
+<marker id="ps-arrGrey" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#B0B0A8"/></marker>
+</defs>
+<rect x="0" y="0" width="1500" height="1150" fill="#FFFFFF"/>
+
+<text x="750" y="32" font-size="19" font-weight="700" fill="#2A2A28" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">GateFix 项目结构：判定内核不动，四种部署形态 + 沙箱验证层都是外挂</text>
+<text x="750" y="54" font-size="11.5" font-weight="400" fill="#7A7A74" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">谁依赖谁，一张图看完——不是又一份文件列表，箭头方向就是调用方向</text>
+
+<!-- ===== 系统边界 ===== -->
+<rect x="30" y="68" width="1440" height="1000" rx="14" fill="none" stroke="#C7C7C0" stroke-width="1.6" stroke-dasharray="9,5"/>
+<text x="58" y="92" font-size="10.5" font-weight="700" fill="#8A8A84" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">GateFix repo 边界——里面没有一个外部系统/真实 API 调用（LLM-free，见下方说明）</text>
+
+<!-- ===== Row A: 配置层 ===== -->
+<text x="750" y="118" font-size="12" font-weight="700" fill="#8A7A2E" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">配置层——领域相关，换场景就换这 4 处</text>
+
+<g font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif" text-anchor="middle">
+<rect x="90" y="130" width="300" height="66" rx="10" fill="#FFFBEB" stroke="#E6D9A0" stroke-width="1.6"/>
+<text x="240" y="156" font-size="12" font-weight="700" fill="#8A7A2E">commits/&lt;case&gt;_commits.yaml</text>
+<text x="240" y="176" font-size="9" fill="#6E6E68">7 个决策点：可逆性/金额/依赖</text>
+
+<rect x="410" y="130" width="270" height="66" rx="10" fill="#FFFBEB" stroke="#E6D9A0" stroke-width="1.6"/>
+<text x="545" y="156" font-size="12" font-weight="700" fill="#8A7A2E">bindings/&lt;case&gt;_bindings.yaml</text>
+<text x="545" y="176" font-size="9" fill="#6E6E68">谁执行、通过什么渠道</text>
+
+<rect x="700" y="130" width="290" height="66" rx="10" fill="#FFFBEB" stroke="#E6D9A0" stroke-width="1.6"/>
+<text x="845" y="156" font-size="12" font-weight="700" fill="#8A7A2E">evidence/&lt;case&gt;_evidence.yaml</text>
+<text x="845" y="176" font-size="9" fill="#6E6E68">真实证据快照，非虚构</text>
+
+<rect x="1010" y="130" width="400" height="66" rx="10" fill="#FFFBEB" stroke="#E6D9A0" stroke-width="1.6"/>
+<text x="1210" y="156" font-size="12" font-weight="700" fill="#8A7A2E">preconditions/&lt;case&gt;.py</text>
+<text x="1210" y="176" font-size="9" fill="#6E6E68">REGISTRY 打分函数 + REPAIR_REGISTRY（可选）</text>
+</g>
+
+<path d="M750 196 L750 232" fill="none" stroke="#6B6B68" stroke-width="1.8" marker-end="url(#ps-arrM)"/>
+<text x="766" y="218" font-size="9.5" fill="#55554F" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">importlib 按 case 名动态加载</text>
+
+<!-- ===== Row B: 判定内核 ===== -->
+<rect x="480" y="234" width="540" height="118" rx="14" fill="#FDECEE" stroke="#CE5560" stroke-width="2"/>
+<text x="750" y="264" font-size="14.5" font-weight="700" fill="#A03B45" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">判定内核——领域无关，任何场景都不改这两个文件</text>
+<text x="750" y="286" font-size="10.5" fill="#A03B45" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">gate.py：GateConfig（阈值/权重）+ quality_score + route() 三态路由 + GateRecord</text>
+<text x="750" y="306" font-size="10.5" fill="#A03B45" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">engine.py：CLI 运行时 + resolve_precondition()（四种部署形态共用同一份判定逻辑）</text>
+<text x="750" y="330" font-size="9.5" font-weight="700" fill="#8A5A1E" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">这次沙箱验证层新增的 Sequence 检查也不碰这里——组合，不是修改</text>
+
+<path d="M750 352 L750 388" fill="none" stroke="#6B6B68" stroke-width="1.8" marker-end="url(#ps-arrM)"/>
+<text x="766" y="374" font-size="9.5" fill="#55554F" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">四种形态都调 resolve_precondition()</text>
+
+<!-- ===== Row C: 四种部署形态 ===== -->
+<text x="750" y="412" font-size="12" font-weight="700" fill="#3A3A36" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">四种部署形态——都是判定内核的外壳，不是四套判定逻辑</text>
+
+<g font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif" text-anchor="middle">
+<rect x="75" y="424" width="330" height="112" rx="12" fill="#FFFBEB" stroke="#E6D9A0" stroke-width="1.6"/>
+<text x="240" y="450" font-size="13" font-weight="700" fill="#8A7A2E">CLI（engine.py）</text>
+<text x="240" y="470" font-size="9.5" fill="#6E6E68">python engine.py run --case=…</text>
+<text x="240" y="488" font-size="9.5" fill="#6E6E68">一次性判一整个 case，写 gate_record.jsonl</text>
+<text x="240" y="508" font-size="8.6" fill="#8A8A84">PASS 之后不执行任何副作用</text>
+
+<rect x="425" y="420" width="330" height="120" rx="12" fill="#EAF6EE" stroke="#2F6B44" stroke-width="2.4"/>
+<text x="590" y="446" font-size="13" font-weight="700" fill="#2F6B44">Agent loop（agent/gated_loop.py）★</text>
+<text x="590" y="466" font-size="9.5" fill="#6E6E68">GatedAgentLoop：reason → gate → act</text>
+<text x="590" y="484" font-size="9.5" fill="#2F6B44">非 PASS 绝不调 tool_fn，唯一不可放宽的契约</text>
+<text x="590" y="502" font-size="8.6" fill="#2F6B44" font-weight="700">沙箱验证层就外挂在这一个形态上（见下方）</text>
+<text x="590" y="520" font-size="8.6" fill="#8A8A84">仍是 LLM-free，reason_fn 是最小实现不是 planner</text>
+
+<rect x="775" y="424" width="310" height="112" rx="12" fill="#E5F0FA" stroke="#4C89C8" stroke-width="1.6"/>
+<text x="930" y="450" font-size="13" font-weight="700" fill="#2F5E8C">LangGraph（agent/langgraph_loop.py）</text>
+<text x="930" y="470" font-size="9.5" fill="#6E6E68">同一套 reason→gate→act，换 StateGraph 表达</text>
+<text x="930" y="488" font-size="9.5" fill="#6E6E68">human_review 节点：interrupt()/Command(resume=…)</text>
+<text x="930" y="508" font-size="8.6" fill="#8A8A84">可恢复暂停，不是简单终止——resume 不能让非 PASS 变 PASS</text>
+
+<rect x="1105" y="424" width="320" height="112" rx="12" fill="#F1EEFB" stroke="#7B6CC8" stroke-width="1.6"/>
+<text x="1265" y="450" font-size="13" font-weight="700" fill="#4E4390">MCP server（mcp_server/server.py）</text>
+<text x="1265" y="470" font-size="9.5" fill="#6E6E68">list_precondition_functions / authorize 两个 tool</text>
+<text x="1265" y="488" font-size="9.5" fill="#6E6E68">判"活证据"，不是案例回放——任何 MCP client 能调</text>
+<text x="1265" y="508" font-size="8.6" fill="#8A8A84">bypass_to_human 的 precondition_fn 显式排除，不可被绕过授权</text>
+</g>
+
+<path d="M240 424 L590 358" fill="none" stroke="#6B6B68" stroke-width="1.4" opacity="0.5"/>
+<path d="M930 420 L780 358" fill="none" stroke="#6B6B68" stroke-width="1.4" opacity="0.5"/>
+<path d="M1265 424 L850 358" fill="none" stroke="#6B6B68" stroke-width="1.4" opacity="0.5"/>
+
+<!-- ===== Row D: 沙箱验证层 ===== -->
+<path d="M590 540 L590 576" fill="none" stroke="#2F6B44" stroke-width="1.8" marker-end="url(#ps-arrGr)"/>
+<text x="606" y="562" font-size="9.5" fill="#2F6B44" font-weight="700" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">tool_fn 从「打印字符串」换成 world.execute()</text>
+
+<rect x="200" y="578" width="1100" height="120" rx="14" fill="#E3F5F2" stroke="#2E9C8F" stroke-width="2"/>
+<text x="750" y="606" font-size="13.5" font-weight="700" fill="#1F6E64" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">沙箱验证层（新增）——不是第五种部署形态，是「PASS 之后」这个共用插槽的第一次真实实现</text>
+<text x="750" y="628" font-size="10" fill="#1F6E64" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">world/sydney_move_world.py：SandboxWorld——记录 commit 真实执行的状态，不做判定；execute() 违反 requires 照样记录、只是附带抛异常</text>
+<text x="750" y="648" font-size="10" fill="#1F6E64" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">agent/two_arm_experiment.py：check_sequence_precondition（新硬性前置，组合在 make_case_gate_fn 前面）+ GovernedArm / UngovernedArm</text>
+<text x="750" y="670" font-size="9" fill="#5C5C56" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">本次范围：进程内实现，不接 E2B；只在 Agent loop 接了执行后端，LangGraph/MCP server 是同款插槽本次未接（见下方灰色虚线）</text>
+
+<path d="M930 540 C930 560, 850 578, 810 578" fill="none" stroke="#B0B0A8" stroke-width="1.4" stroke-dasharray="5,4" marker-end="url(#ps-arrGrey)"/>
+<path d="M1265 536 C1265 560, 1000 578, 940 578" fill="none" stroke="#B0B0A8" stroke-width="1.4" stroke-dasharray="5,4" marker-end="url(#ps-arrGrey)"/>
+<text x="1080" y="562" font-size="8.6" fill="#8A8A84" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">同款插槽，未接（punted）</text>
+
+<!-- ===== Row E: 测试横切 ===== -->
+<path d="M750 698 L750 730" fill="none" stroke="#6B6B68" stroke-width="1.4" stroke-dasharray="4,4"/>
+<rect x="90" y="732" width="1320" height="96" rx="12" fill="#F7F5EE" stroke="#DEDED8" stroke-width="1.6"/>
+<text x="750" y="758" font-size="12.5" font-weight="700" fill="#3A3A36" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">tests/ ——横切验证，每一层改动都有对应测试，全部基于真实案例数据，不是 mock</text>
+<text x="750" y="780" font-size="9.3" fill="#5C5C56" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">test_engine / test_admission_gate（内核）　test_gated_loop / test_langgraph_loop / test_mcp_server（三种外壳）</text>
+<text x="750" y="798" font-size="9.3" fill="#5C5C56" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">test_two_arm_experiment（沙箱验证层）——67 个测试全过，改任何一层都会被对应测试立刻发现</text>
+
+<!-- ===== 底部说明框 ===== -->
+<rect x="90" y="852" width="650" height="180" rx="12" fill="#F7F5EE" stroke="#DEDED8" stroke-width="1.6"/>
+<text x="110" y="880" font-size="13" font-weight="700" fill="#3A3A36" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">这张图想说明什么</text>
+<text x="110" y="904" font-size="10.2" fill="#5C5C56" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">箭头方向就是真实调用方向——配置层被内核加载，内核被四种</text>
+<text x="110" y="922" font-size="10.2" fill="#5C5C56" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">形态调用，不是反过来。换场景只改配置层，内核和外壳都不用改。</text>
+<text x="110" y="944" font-size="10.2" fill="#5C5C56" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">沙箱验证层是外挂，不是内核的一部分——这条边界在代码和图上</text>
+<text x="110" y="962" font-size="10.2" fill="#5C5C56" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">是同一件事：新机制永远组合在既有判定逻辑外面，不改写它。</text>
+<text x="110" y="986" font-size="9.5" fill="#8A8A84" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">对应机制图①②③：docs/architecture.svg / decision_chain.svg /</text>
+<text x="110" y="1004" font-size="9.5" fill="#8A8A84" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">autonomy_layering.svg；沙箱验证细节见 docs/sandbox_verification.svg</text>
+
+<rect x="760" y="852" width="650" height="180" rx="12" fill="#FDF3E3" stroke="#D9A441" stroke-width="1.6"/>
+<text x="780" y="880" font-size="13" font-weight="700" fill="#8A5A1E" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">怎么读（写给非技术读者）</text>
+<text x="780" y="904" font-size="10.2" fill="#6B5410" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">黄色＝会随场景变化的东西（数据）；红色＝判断逻辑本身，不管</text>
+<text x="780" y="922" font-size="10.2" fill="#6B5410" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">场景怎么换都不动；蓝/紫/黄绿＝三种"接进别的系统"的方式；</text>
+<text x="780" y="944" font-size="10.2" fill="#6B5410" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">青色＝这次新加的，用来验证"没有门禁真的会出事"这件事。</text>
+<text x="780" y="966" font-size="10.2" fill="#6B5410" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">虚线框＝整个仓库的边界——里面没有一处真的连外部系统或调用</text>
+<text x="780" y="984" font-size="10.2" fill="#6B5410" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">真实模型，这也是为什么整套东西能被完整、确定性地重复跑通。</text>
+<text x="780" y="1008" font-size="9.5" font-weight="700" fill="#8A5A1E" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">一句话：数据会换，判断逻辑不换，新功能永远是外挂不是改写。</text>
+</svg>
