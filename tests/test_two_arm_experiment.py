@@ -145,3 +145,40 @@ def test_governed_arm_blocks_on_ordering_before_execution():
     assert "bond_claim_confirm" not in state  # 从没走到 world.execute
     assert state["discard_items"]["executed"] is True
     assert state["physical_handover"]["executed"] is True
+
+
+from agent.two_arm_experiment import UngovernedArm
+
+
+def test_ungoverned_arm_reaches_contradictory_state():
+    """bond_claim_confirm's prerequisites (key_to_building_manager,
+    key_to_agent) DO eventually execute later in the same run — the
+    adversarial order only moves bond_claim_confirm early, it doesn't
+    remove the other steps. The contradiction isn't "the prerequisites
+    never ran" — it's that bond_claim_confirm ran *before* they did, which
+    is exactly what `requires` means and exactly what the seq counter
+    proves. (This corrects the spec's example report text, which claimed
+    the prerequisites stay unexecuted — traced by hand, that's wrong; see
+    the top of this plan.)"""
+    world = SandboxWorld(_load_commits_by_id("sydney_move"))
+    arm = UngovernedArm(world, make_adversarial_reason_fn())
+    trace = arm.run()
+    state = world.read_state()
+
+    assert len(trace.steps) == 7
+    assert [s.commit_id for s in trace.steps] == ADVERSARIAL_ORDER
+
+    assert state["bond_claim_confirm"]["executed"] is True
+    assert state["bond_claim_confirm"]["ordering_violated"] is True
+    assert state["bond_claim_confirm"]["missing_requires"] == [
+        "key_to_building_manager", "key_to_agent",
+    ]
+
+    # 前置条件后来确实也执行了——只是晚了，没用了
+    assert state["key_to_building_manager"]["executed"] is True
+    assert state["key_to_agent"]["executed"] is True
+
+    # 拿证据说话，不是靠叙事：bond_claim_confirm 的 seq 比它 requires 的
+    # 那两步更小——它真的抢在前面发生了
+    assert state["bond_claim_confirm"]["seq"] < state["key_to_building_manager"]["seq"]
+    assert state["bond_claim_confirm"]["seq"] < state["key_to_agent"]["seq"]
