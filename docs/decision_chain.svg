@@ -111,5 +111,5 @@
 <text x="600" y="1170" font-size="11" font-weight="700" fill="#3A3A36" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">已落地 / Already Implemented：CLI 一次性判定 → agent loop 逐步授权 → MCP server 判活证据 → LangGraph StateGraph 编排</text>
 <text x="600" y="1188" font-size="10" font-weight="400" fill="#6E6E68" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">四层部署形态共用同一份 resolve_precondition()，不是四份平行实现 / all four call the same resolve_precondition(), not parallel copies</text>
 
-<text x="600" y="1236" font-size="9.5" font-weight="400" fill="#9A9A92" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">第二张：docs/autonomy_layering.svg · Chart 2: autonomy spectrum + engine/config layering</text>
+<text x="600" y="1236" font-size="9.5" font-weight="400" fill="#9A9A92" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">第二张：docs/autonomy_layering.svg · Chart 2: autonomy spectrum</text>
 </svg>
