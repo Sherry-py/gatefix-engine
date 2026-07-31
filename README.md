@@ -15,10 +15,10 @@ action, the system decides whether to allow it" is structurally identical
 to "a person executes one step, and needs to know whether to stop." This
 repo is a small, runnable engine (`gate.py` + `engine.py`, ~250 lines, one
 dependency) that encodes that decision rule and runs it end-to-end on the
-real case it came from: an 8-commit, cross-border, remote lease-termination
+real case it came from: a 7-commit, cross-border, remote lease-termination
 in Sydney, with real dollar amounts and real third-party executors (names
 replaced with role labels, facts kept real). `python engine.py run
---case=sydney_move` reproduces all 8 routing decisions deterministically —
+--case=sydney_move` reproduces all 7 routing decisions deterministically —
 no LLM call needed, the decision logic itself is the point.
 
 **给非技术读者的话：** 这套判定规则不是从"给 AI agent 加治理"这个需求出发的，
@@ -28,8 +28,8 @@ no LLM call needed, the decision logic itself is the point.
 外部风险。同一条规则直接适用于 AI agent 的执行前授权，因为"agent 提出一个
 动作、系统决定放不放行"和"人执行流程里的一步、要不要先停下来"结构上是同一个
 问题。案例是一次真实发生的悉尼公寓远程退租：委托人已经回国，钥匙、家具、清洁、
-中介结算全部要靠 8 个不可逆决策点和多个人类执行器远程完成。代码跑一遍，
-就能看到框架把这 8 个决策点分别判成"直接放行""自动补证据再判""必须叫人终审"
+中介结算全部要靠 7 个不可逆决策点和多个人类执行器远程完成。代码跑一遍，
+就能看到框架把这 7 个决策点分别判成"直接放行""自动补证据再判""必须叫人终审"
 "这事儿机器判不了、直接交给人"四种结果——全部对应真实发生过的事，不是编的。
 
 这不是一个抽象 demo。`evidence/sydney_move_evidence.yaml` 里的每一条都是这次悉尼
@@ -44,7 +44,7 @@ Rosebery 公寓远程退租真实发生过的事——包括案例后期新增�
 同一件事——证据够不够格放行。
 
 这套 Guardrails 层的形态不是照着行业框架图设计出来的，是这次真实退租案例逼出来
-的：8 个决策点里有好几个一旦做错就无法挽回（钥匙一旦移交、纸箱一旦交运海关就不
+的：7 个决策点里有好几个一旦做错就无法挽回（钥匙一旦移交、纸箱一旦交运海关就不
 受控），当时唯一能安全推进的办法就是给每一步定死"什么证据够、什么证据不够"，
 过了才能进下一步。这套判定纪律先于"Agent Harness""Guardrails"这些说法存在——
 行业最近才把这类"执行前拦一道"的做法归了类、起了名字，GateFix 是把一套原本就
@@ -92,7 +92,9 @@ Relevance/Coverage/Ordering/Robustness）、以及**谁最终对这个判定负�
   这个不符只能靠人核实关系，engine.py 里 `verifiable_ext=False`，不会走 AUTO_REPAIR，
   直接升级给人）。
 - **BYPASS_TO_HUMAN**：证据是人情类、机器根本组装不了，不进入四维打分
-  （"对朋友补偿支付"——关系深浅、开口语气不在任何 API 里）。
+  （"对朋友的分账承诺与补偿"——关系深浅、开口语气不在任何 API 里。这一条现实里是两阶段：
+  先承诺按比例分账，旧物短期卖不掉、分账落空后改现金+实物结清；承诺阶段有客观证据，
+  单独走一次 `expectation_gate` 预检并记录在案，但预检结果不会、也不能替最终的人工补偿决定拍板）。
 - **外部或有闸门 Risk_ext**：`air_freight_dispatch`（空运纸箱交运）这一条即使 route=PASS，
   引擎仍会额外报告 `Risk_ext = p_inspect × Loss(a∣inspected) = 0.15 × 1240 ≈ ¥186`——
   这是本框架这次新增的理论点：**Commit(a,E)=True 不代表总成本已确定**，
@@ -181,6 +183,18 @@ passport）——都是"在推理和真正执行之间插一道独立判定"的�
 配置"（`commits` / `bindings` / `evidence` / `preconditions` 四份文件，换场景就换这几处）之间的
 分层关系——这是对"能不能落地"这个问题最直接的证据（单场景验证现状见上文"这个项目证明什么"）。
 
+### 沙箱验证机制（设计阶段，尚未实现）
+
+![GateFix sandbox verification — two real execution traces of the same 8 commits, where they diverge, and the three hardest questions answered on the diagram itself](docs/sandbox_verification.svg)
+
+这张图不是又一张组件架构图，是同一组 7 个 commit 的**两条真实执行轨迹**，而且两臂拿到的是**完全相同的提案**——都在第 3 步尝试把 `bond_claim_confirm` 提前到两次钥匙交接之前。上面一条有 gate，提案在这一步被硬性拦下，后面 4 步压根没机会发生；下面一条没有 gate，同一个提案直接放行，7 步"全部执行"。两臂共用同一提案是审阅时才修正的：早期草稿让 governed 按正常顺序走、ungoverned 才乱序，导致 governed 的拦截其实来自跟这次实验无关的另一个 ESCALATE 分支，测不到新机制——控制变量改成"提案相同、只切 gate 开关"之后才是真的对比。
+
+**这是构造场景，不是历史**：真实案例里钥匙确实交了（`key_to_agent` 经 AUTO_REPAIR 后 PASS），真实的 `bond_claim_confirm` ESCALATE 是退款户名不符，跟顺序无关，`engine.py` 今天就在正确处理这件事，运行 `python engine.py run --case=sydney_move` 可见。图里"提前确认 Bond"这个提案从没在现实里发生过，是专门构造出来测试新 Sequence 机制的对抗性输入，不是历史重现——图的最上方用一个醒目的橙色框把这句话摆在最前面，不留给读者自己发现。
+
+两条轨迹跑完后从 `SandboxWorld.read_state()` 读回的终态，一个自洽、一个自相矛盾——矛盾是从沙箱里独立读出来的事实，不是图自己讲的故事。图的下半部分不是"这张图想说明什么"的自夸，是三个大概率会被审稿人问到的问题（为什么不是统计违规率、为什么不用真 LLM planner、沙箱是否真的独立于 agent）连同诚实答案一起摆出来，参考的是 Rust RFC 的 alternatives/drawbacks、Amazon PR/FAQ 的"最难问题自答"、Nygard ADR 的"决策后必须跟代价"这几种写法的共同点：**不等读者发现弱点，自己先写出来**。
+
+**如实说明现状**：这套机制目前只有 spec（`docs/superpowers/specs/2026-07-31-two-arm-sandbox-experiment-design.md`），还没有代码落地，图里标了"本次范围"和"后续工作"的边界，不代表已经跑通的结论。
+
 ## 怎么跑
 
 ```bash
@@ -189,7 +203,7 @@ python engine.py run --case=sydney_move
 python engine.py run --case=sydney_move --verbose   # 打印每一轮 AUTO_REPAIR 的细节
 ```
 
-跑完会在终端看到 8 个 commit 逐条的路由过程，并在 `gate_record.jsonl` 里写一份
+跑完会在终端看到 7 个 commit 逐条的路由过程，并在 `gate_record.jsonl` 里写一份
 结构化的判定记录（一行一个 JSON，含 R/C/O/Ro/Q/route/notes 等字段，可直接喂给
 下一步的分析或可视化）。
 
@@ -199,7 +213,7 @@ pytest -v
 ```
 
 测试覆盖两层：`gate.py` 六个公式的单元测试（阈值边界、k_dry 耗尽、expectation_gate
-真值表），以及一个端到端回归测试——跑一遍 sydney_move case，断言 8 个 commit 的
+真值表），以及一个端到端回归测试——跑一遍 sydney_move case，断言 7 个 commit 的
 route 结果跟本 README 里描述的完全一致。改了 `commits/sydney_move_commits.yaml` /
 `preconditions/sydney_move.py` 之后这个测试能立刻告诉你有没有破坏真实案例的判定结果。
 注意这两层测试覆盖的是不同的东西：单元测试验证的是引擎数学本身（对任何场景都该成立），
@@ -220,7 +234,7 @@ route 结果跟本 README 里描述的完全一致。改了 `commits/sydney_move
 python agent/gated_loop.py --case=sydney_move
 ```
 
-这条命令会按 `commits/sydney_move_commits.yaml` 里的真实顺序，逐个把 8 个
+这条命令会按 `commits/sydney_move_commits.yaml` 里的真实顺序，逐个把 7 个
 commit 当作待授权的动作喂给真实 gate：前 4 个（`discard_items` /
 `physical_handover` / `key_to_building_manager` / `key_to_agent`）真实判定为
 PASS（`key_to_agent` 内部真实走了一轮 AUTO_REPAIR 才收敛到 PASS），第 5 个
@@ -271,13 +285,15 @@ python mcp_server/server.py   # stdio transport，接入任何 MCP client 的方
 
 如实说明这个东西的边界：
 
-- **只认得 sydney_move 这 7 个打分函数期望的 evidence 形状**，不是一个能判断
-  任意领域动作的通用 gate——传别的字段进去，打分函数只会按它认识的字段算，
-  不认识的字段会被忽略，不会报错提醒你传错了。
-- **`friend_compensation` 这类 `bypass_to_human` 的 commit 没有
-  `precondition_fn`**，不会出现在 `list_precondition_functions` 里，也没法
-  通过 `authorize()` 判定——这是有意的：人情类证据本来就该直接交给人，不该
-  假装能被 evidence-based gate 自动判定。
+- **只认得 sydney_move 这 6 个可独立授权的打分函数期望的 evidence 形状**，
+  不是一个能判断任意领域动作的通用 gate——传别的字段进去，打分函数只会按它
+  认识的字段算，不认识的字段会被忽略，不会报错提醒你传错了。
+- **`friend_compensation` 这类 `bypass_to_human` 的 commit 不会出现在
+  `list_precondition_functions` 里，也没法通过 `authorize()` 判定**——这是
+  有意的：即使它自己也带一个 `precondition_fn`（`friend_compensation` 的
+  `score_expectation_setting` 是承诺阶段的内部预检，只给 CLI/agent
+  loop/LangGraph 里的人工审核当参考），那个预检结果也不能被外部 MCP client
+  当成"已授权"绕开人工审核——人情类的最终决定本来就该直接交给人。
 - **和 CLI/agent loop 共用判定逻辑**：调用的是 `agent/gated_loop.py` 里的
   `resolve_precondition()`（三态路由 + AUTO_REPAIR + soft_commit 的共享
   实现，`make_case_gate_fn` 也调它）。
@@ -322,7 +338,10 @@ python agent/langgraph_loop.py --case=sydney_move
 ├── docs/
 │   ├── architecture.svg                      # 机制图①：六节点最小骨架 + 公式绑定
 │   ├── decision_chain.svg                    # 机制图②：判定链主干 + 形式化表达 + 完整四态判定式
-│   └── autonomy_layering.svg                 # 机制图③：四态自主度谱系 + 引擎/配置分层带
+│   ├── autonomy_layering.svg                 # 机制图③：四态自主度谱系 + 引擎/配置分层带
+│   └── sandbox_verification.svg              # 机制图④：沙箱验证（设计阶段，见 docs/superpowers/specs/）
+├── docs/superpowers/specs/
+│   └── 2026-07-31-two-arm-sandbox-experiment-design.md  # 沙箱验证机制的完整 spec，尚未实现
 ├── gate.py                                   # 引擎核心：GateConfig（阈值/权重）+ GateRecord（判定记录结构）
 │                                              # quality_score / route / is_commit / loop_mode /
 │                                              # expectation_gate / expected_external_risk 六个公式的代码实现
@@ -338,13 +357,13 @@ python agent/langgraph_loop.py --case=sydney_move
 │   └── server.py                             # 把 gate 包成 MCP server：list_precondition_functions /
 │                                              # authorize 两个 tool，判定活证据，不是案例回放
 ├── commits/
-│   └── sydney_move_commits.yaml               # 8 个 commit 点定义（可逆性/涉及金额/打分函数名/风险配置）
+│   └── sydney_move_commits.yaml               # 7 个 commit 点定义（可逆性/涉及金额/打分函数名/风险配置）
 ├── bindings/
 │   └── sydney_move_bindings.yaml               # 每个 commit 绑定的真实执行人（以身份角色标注，姓名已脱敏）
 ├── preconditions/
 │   └── sydney_move.py                         # 7 个打分函数——本案例特有的 Pᵢ(E,θᵢ) 具体实现
 ├── evidence/
-│   └── sydney_move_evidence.yaml              # 真实案例证据（8 条，含案例后期新增的纸箱/关税事件）
+│   └── sydney_move_evidence.yaml              # 真实案例证据（7 条，含案例后期新增的纸箱/关税事件）
 ├── tests/
 │   ├── test_engine.py                         # gate.py 公式单元测试 + sydney_move 端到端回归测试
 │   ├── test_admission_gate.py                 # precondition 打分函数的准入自检（见上文"不是 benchmark，也不是 LLM judge"）

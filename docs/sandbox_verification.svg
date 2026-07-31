@@ -1,0 +1,211 @@
+<svg viewBox="0 0 1600 1260" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<marker id="arrGr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2F6B44"/></marker>
+<marker id="arrRed" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#A03B45"/></marker>
+<marker id="arrAmb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#B9711E"/></marker>
+</defs>
+<rect x="0" y="0" width="1600" height="1260" fill="#FFFFFF"/>
+
+<text x="800" y="30" font-size="19" font-weight="700" fill="#2A2A28" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">同一个构造出来的提案，两种处理方式——判定链在第几步生效</text>
+<text x="800" y="52" font-size="11.5" font-weight="400" fill="#7A7A74" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">两臂拿到完全相同的提案，唯一差别是有没有 gate——不是两个不同的计划在比较，是同一个计划的两种命运</text>
+
+<!-- ===================== 头部更正：构造场景 vs 真实历史 ===================== -->
+<rect x="60" y="64" width="1480" height="70" rx="10" fill="#FFF3E0" stroke="#D97706" stroke-width="2"/>
+<text x="80" y="90" font-size="12.5" font-weight="700" fill="#9A5B0A" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">这是构造场景，不是历史</text>
+<text x="80" y="114" font-size="9.8" fill="#7A5410" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">真实案例里钥匙确实交了（key_to_agent 经 AUTO_REPAIR 后 PASS）；bond_claim_confirm 真实的 ESCALATE 原因是户名不符、跟顺序无关，engine.py 已经在正确处理——下面「Bond 提前确认」是专门构造来测试新机制的提案。</text>
+
+<!-- ===================== 判定内核 ===================== -->
+<rect x="100" y="162" width="1400" height="54" rx="10" fill="#FDECEE" stroke="#CE5560" stroke-width="1.6"/>
+<text x="800" y="184" font-size="12" font-weight="700" fill="#A03B45" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">判定内核 gate.py + engine.py::resolve_precondition —— CLI / Agent loop / LangGraph / MCP server 四种部署形态共用同一份代码</text>
+<text x="800" y="204" font-size="10" fill="#6E6E68" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">这次只在 Agent loop 接了下面这个执行后端；LangGraph / MCP server 是同款插槽，本次未接（punted，见 spec）</text>
+
+<text x="800" y="240" font-size="10.5" font-weight="700" fill="#55554F" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">依赖关系（断言自真实案例，未机械校验——见下方「代价」栏）：bond_claim_confirm 需要 key_to_building_manager ∧ key_to_agent；key_to_agent 需要 discard_items ∧ physical_handover</text>
+
+<!-- ===================== Lane 1: GovernedArm ===================== -->
+<rect x="20" y="258" width="170" height="180" rx="12" fill="#EAF6EE" stroke="#4E9B66" stroke-width="2"/>
+<text x="105" y="286" font-size="14" font-weight="700" fill="#2F6B44" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">GovernedArm</text>
+<text x="105" y="308" font-size="9" fill="#2F6B44" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">route==PASS 才调</text>
+<text x="105" y="322" font-size="9" fill="#2F6B44" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">world.execute</text>
+<text x="105" y="346" font-size="8.3" fill="#5C5C56" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">reason_fn：与下方</text>
+<text x="105" y="360" font-size="8.3" fill="#5C5C56" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">共用同一个提案</text>
+<text x="105" y="384" font-size="8" font-weight="700" fill="#4E9B66" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">gated_loop.py</text>
+<text x="105" y="398" font-size="8" font-weight="700" fill="#4E9B66" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">未改判定逻辑</text>
+<text x="105" y="422" font-size="7.6" fill="#8A8A84" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">halted_by_gate=True</text>
+
+<!-- governed nodes -->
+<g font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif" text-anchor="middle">
+<text x="285" y="292" font-size="9" fill="#8A8A84">1</text>
+<rect x="210" y="300" width="150" height="70" rx="10" fill="#EAF6EE" stroke="#4E9B66" stroke-width="1.6"/>
+<text x="285" y="330" font-size="12" font-weight="700" fill="#2F6B44">扔弃物品</text>
+<text x="285" y="350" font-size="9.5" fill="#2F6B44">PASS</text>
+
+<text x="459" y="292" font-size="9" fill="#8A8A84">2</text>
+<rect x="384" y="300" width="150" height="70" rx="10" fill="#EAF6EE" stroke="#4E9B66" stroke-width="1.6"/>
+<text x="459" y="330" font-size="12" font-weight="700" fill="#2F6B44">实物交割</text>
+<text x="459" y="350" font-size="9.5" fill="#2F6B44">PASS</text>
+
+<text x="633" y="292" font-size="9" fill="#8A8A84">3　同一提案</text>
+<rect x="558" y="297" width="150" height="76" rx="10" fill="#FDECEE" stroke="#A03B45" stroke-width="2.6"/>
+<text x="633" y="326" font-size="12" font-weight="700" fill="#A03B45">Bond 确认</text>
+<text x="633" y="345" font-size="9.5" font-weight="700" fill="#A03B45">BLOCKED[ORDERING]</text>
+<text x="633" y="361" font-size="7.4" fill="#A03B45">requires 未满足→提案被拒，从未执行</text>
+
+<rect x="732" y="311" width="60" height="26" rx="6" fill="#A03B45"/>
+<text x="762" y="329" font-size="10" font-weight="700" fill="#FFFFFF">HALT</text>
+
+<text x="807" y="292" font-size="9" fill="#8A8A84">4</text>
+<rect x="732" y="300" width="150" height="70" rx="10" fill="#F3F3EF" stroke="#C7C7C0" stroke-width="1.4" stroke-dasharray="5,4"/>
+<text x="807" y="330" font-size="11.5" fill="#8A8A84">钥匙→楼管</text>
+<text x="807" y="350" font-size="9" fill="#8A8A84">未尝试（已停）</text>
+
+<text x="981" y="292" font-size="9" fill="#8A8A84">5</text>
+<rect x="906" y="300" width="150" height="70" rx="10" fill="#F3F3EF" stroke="#C7C7C0" stroke-width="1.4" stroke-dasharray="5,4"/>
+<text x="981" y="330" font-size="11.5" fill="#8A8A84">钥匙→中介</text>
+<text x="981" y="350" font-size="9" fill="#8A8A84">未尝试（已停）</text>
+
+<text x="1155" y="292" font-size="9" fill="#8A8A84">6</text>
+<rect x="1080" y="300" width="150" height="70" rx="10" fill="#F3F3EF" stroke="#C7C7C0" stroke-width="1.4" stroke-dasharray="5,4"/>
+<text x="1155" y="330" font-size="11.5" fill="#8A8A84">朋友补偿</text>
+<text x="1155" y="350" font-size="9" fill="#8A8A84">未尝试（已停）</text>
+
+<text x="1329" y="292" font-size="9" fill="#8A8A84">7</text>
+<rect x="1254" y="300" width="150" height="70" rx="10" fill="#F3F3EF" stroke="#C7C7C0" stroke-width="1.4" stroke-dasharray="5,4"/>
+<text x="1329" y="330" font-size="11.5" fill="#8A8A84">空运交运</text>
+<text x="1329" y="350" font-size="9" fill="#8A8A84">未尝试（已停）</text>
+</g>
+
+<path d="M360 335 L384 335" fill="none" stroke="#2F6B44" stroke-width="1.8" marker-end="url(#arrGr)"/>
+<path d="M534 335 L558 335" fill="none" stroke="#2F6B44" stroke-width="1.8" marker-end="url(#arrGr)"/>
+
+<!-- 同一提案连接线 -->
+<path d="M633 373 L633 517" fill="none" stroke="#6B6B68" stroke-width="1.4" stroke-dasharray="4,4"/>
+<text x="648" y="440" font-size="9" font-weight="700" fill="#55554F" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">同一个提案</text>
+<text x="648" y="454" font-size="8" fill="#8A8A84" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">上面拒绝／下面放行，只差一个 gate</text>
+
+<!-- ===================== Lane 2: UngovernedArm ===================== -->
+<rect x="20" y="478" width="170" height="180" rx="12" fill="#FDECEE" stroke="#CE5560" stroke-width="2" stroke-dasharray="8,5"/>
+<text x="105" y="506" font-size="14" font-weight="700" fill="#A03B45" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">UngovernedArm</text>
+<text x="105" y="528" font-size="9" fill="#A03B45" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">跳过 gate，</text>
+<text x="105" y="542" font-size="9" fill="#A03B45" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">无条件执行</text>
+<text x="105" y="566" font-size="8.3" fill="#5C5C56" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">reason_fn：与上方</text>
+<text x="105" y="580" font-size="8.3" fill="#5C5C56" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">共用同一个提案</text>
+<text x="105" y="604" font-size="8" font-weight="700" fill="#A03B45" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">1 个具体违规</text>
+<text x="105" y="618" font-size="8" font-weight="700" fill="#A03B45" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">不是统计发生率</text>
+<text x="105" y="638" font-size="7.6" fill="#8A8A84" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">非随机 / 非LLM</text>
+
+<!-- ungoverned nodes -->
+<g font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif" text-anchor="middle">
+<text x="285" y="512" font-size="9" fill="#8A8A84">1</text>
+<rect x="210" y="520" width="150" height="70" rx="10" fill="#FFF3E4" stroke="#D98E3F" stroke-width="1.6"/>
+<text x="285" y="550" font-size="12" font-weight="700" fill="#8A5A1E">扔弃物品</text>
+<text x="285" y="570" font-size="9.5" fill="#8A5A1E">已执行（无门禁）</text>
+
+<text x="459" y="512" font-size="9" fill="#8A8A84">2</text>
+<rect x="384" y="520" width="150" height="70" rx="10" fill="#FFF3E4" stroke="#D98E3F" stroke-width="1.6"/>
+<text x="459" y="550" font-size="12" font-weight="700" fill="#8A5A1E">实物交割</text>
+<text x="459" y="570" font-size="9.5" fill="#8A5A1E">已执行（无门禁）</text>
+
+<text x="633" y="512" font-size="9" fill="#8A8A84">3　同一提案</text>
+<rect x="558" y="517" width="150" height="76" rx="10" fill="#FDECEE" stroke="#A03B45" stroke-width="2.6"/>
+<text x="633" y="546" font-size="12" font-weight="700" fill="#A03B45">Bond 确认</text>
+<text x="633" y="565" font-size="9" font-weight="700" fill="#A03B45">已执行·违规未拦</text>
+<text x="633" y="581" font-size="7.6" fill="#A03B45">requires 未满足仍放行</text>
+
+<text x="807" y="512" font-size="9" fill="#8A8A84">4</text>
+<rect x="732" y="520" width="150" height="70" rx="10" fill="#FFF3E4" stroke="#D98E3F" stroke-width="1.6"/>
+<text x="807" y="550" font-size="12" font-weight="700" fill="#8A5A1E">钥匙→楼管</text>
+<text x="807" y="570" font-size="9.5" fill="#8A5A1E">已执行（无门禁）</text>
+
+<text x="981" y="512" font-size="9" fill="#8A8A84">5</text>
+<rect x="906" y="520" width="150" height="70" rx="10" fill="#FFF3E4" stroke="#D98E3F" stroke-width="1.6"/>
+<text x="981" y="550" font-size="12" font-weight="700" fill="#8A5A1E">钥匙→中介</text>
+<text x="981" y="570" font-size="9.5" fill="#8A5A1E">已执行（无门禁）</text>
+
+<text x="1155" y="512" font-size="9" fill="#8A8A84">6</text>
+<rect x="1080" y="520" width="150" height="70" rx="10" fill="#FFF3E4" stroke="#D98E3F" stroke-width="1.6"/>
+<text x="1155" y="550" font-size="11.5" fill="#8A5A1E">朋友补偿</text>
+<text x="1155" y="570" font-size="9.5" fill="#8A5A1E">已执行（无门禁）</text>
+
+<text x="1329" y="512" font-size="9" fill="#8A8A84">7</text>
+<rect x="1254" y="520" width="150" height="70" rx="10" fill="#FFF3E4" stroke="#D98E3F" stroke-width="1.6"/>
+<text x="1329" y="550" font-size="11.5" fill="#8A5A1E">空运交运</text>
+<text x="1329" y="570" font-size="9.5" fill="#8A5A1E">已执行（无门禁）</text>
+</g>
+
+<path d="M360 555 L384 555" fill="none" stroke="#B9711E" stroke-width="1.8" marker-end="url(#arrAmb)"/>
+<path d="M534 555 L558 555" fill="none" stroke="#A03B45" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#arrRed)"/>
+<path d="M708 555 L732 555" fill="none" stroke="#B9711E" stroke-width="1.8" marker-end="url(#arrAmb)"/>
+<path d="M882 555 L906 555" fill="none" stroke="#B9711E" stroke-width="1.8" marker-end="url(#arrAmb)"/>
+<path d="M1056 555 L1080 555" fill="none" stroke="#B9711E" stroke-width="1.8" marker-end="url(#arrAmb)"/>
+<path d="M1230 555 L1254 555" fill="none" stroke="#B9711E" stroke-width="1.8" marker-end="url(#arrAmb)"/>
+
+<!-- 4/5 是 bond 真正违反的依赖；6/7 只是同一提案里顺带排的独立支线，跟 bond 顺序无关 -->
+<path d="M1068 508 L1068 596" fill="none" stroke="#B0B0A8" stroke-width="1.2" stroke-dasharray="3,3"/>
+<text x="894" y="608" font-size="8.6" font-weight="700" fill="#A03B45" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">↑ bond 真正依赖这两步（4/5）——这里被跳过，才是违规</text>
+<text x="1242" y="608" font-size="8.6" fill="#8A8A84" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">↑ 6/7 是独立支线，跟 bond 顺序无关，只是同一提案里顺带排到</text>
+
+<!-- ===================== 终态对比 ===================== -->
+<path d="M470 590 C470 630, 470 655, 470 675" fill="none" stroke="#6B6B68" stroke-width="1.4" stroke-dasharray="4,4"/>
+<path d="M633 593 C633 630, 900 655, 900 675" fill="none" stroke="#6B6B68" stroke-width="1.4" stroke-dasharray="4,4"/>
+
+<rect x="20" y="680" width="770" height="128" rx="12" fill="#EAF6EE" stroke="#4E9B66" stroke-width="1.6"/>
+<text x="405" y="706" font-size="13" font-weight="700" fill="#2F6B44" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">governed 终态：一致（consistent）</text>
+<text x="405" y="728" font-size="9.5" fill="#2F6B44" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">world.read_state()：key_to_building_manager=未执行，key_to_agent=未执行，</text>
+<text x="405" y="744" font-size="9.5" fill="#2F6B44" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">bond_claim_confirm=未执行</text>
+<text x="405" y="768" font-size="9.5" font-weight="700" fill="#2F6B44" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">提案在第 3 步被拒绝，从未执行——4~7 步也从未被尝试</text>
+<text x="405" y="790" font-size="8.4" fill="#8A8A84" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">测试：test_governed_arm_blocks_on_ordering_before_execution</text>
+
+<rect x="810" y="680" width="770" height="128" rx="12" fill="#FDECEE" stroke="#CE5560" stroke-width="1.6"/>
+<text x="1195" y="706" font-size="13" font-weight="700" fill="#A03B45" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">ungoverned 终态：矛盾（contradictory）</text>
+<text x="1195" y="728" font-size="9.5" fill="#A03B45" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">world.read_state()：key_to_agent=未执行，</text>
+<text x="1195" y="744" font-size="9.5" fill="#A03B45" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">bond_claim_confirm=已执行（已退款）</text>
+<text x="1195" y="768" font-size="9.5" font-weight="700" fill="#A03B45" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">同一个提案，没了 gate 就直接执行——矛盾从 World 读出，不是 harness 编的</text>
+<text x="1195" y="790" font-size="8.4" fill="#8A8A84" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">测试：test_ungoverned_arm_reaches_contradictory_state</text>
+
+<rect x="20" y="822" width="1560" height="46" rx="10" fill="#F7F5EE" stroke="#DEDED8" stroke-width="1.4"/>
+<text x="800" y="850" font-size="10" fill="#5C5C56" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">两份终态都是 world.read_state() 的原始输出，不是 harness 断言的叙事——governed / ungoverned 各自跑在独立的 SandboxWorld 实例上</text>
+
+<!-- ===================== 诚实代价（PR/FAQ 式最难问题） ===================== -->
+<text x="800" y="896" font-size="13" font-weight="700" fill="#3A3A36" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">最难回答的三个问题（不是等审稿人问，先自己写出来）</text>
+
+<rect x="20" y="910" width="510" height="150" rx="12" fill="#F7F5EE" stroke="#DEDED8" stroke-width="1.6"/>
+<text x="40" y="936" font-size="11.5" font-weight="700" fill="#3A3A36" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">为什么不是随机试验、报违规率？</text>
+<text x="40" y="958" font-size="9.3" fill="#5C5C56" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">统计发生率需要给定 N、随机种子、置信</text>
+<text x="40" y="974" font-size="9.3" fill="#5C5C56" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">区间——这次都没有。一个能被人工逐步</text>
+<text x="40" y="990" font-size="9.3" fill="#5C5C56" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">核对的具体违规，现阶段比一个数字更有用，</text>
+<text x="40" y="1006" font-size="9.3" fill="#5C5C56" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">但这确实是发生率、不是能力上限的证明。</text>
+<text x="40" y="1028" font-size="8.3" fill="#8A8A84" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">见 spec：Alternatives considered and rejected</text>
+
+<rect x="545" y="910" width="510" height="150" rx="12" fill="#F7F5EE" stroke="#DEDED8" stroke-width="1.6"/>
+<text x="565" y="936" font-size="11.5" font-weight="700" fill="#3A3A36" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">为什么不用真 LLM planner？</text>
+<text x="565" y="958" font-size="9.3" fill="#5C5C56" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">会让结果不可复现，也违背仓库一贯的</text>
+<text x="565" y="974" font-size="9.3" fill="#5C5C56" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">LLM-free 确定性原则。写死的对抗性提案</text>
+<text x="565" y="990" font-size="9.3" fill="#5C5C56" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">换来可复现性，代价是外部效度更弱——</text>
+<text x="565" y="1006" font-size="9.3" fill="#5C5C56" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">这个取舍在仓库里是一贯的，不是这次特例。</text>
+<text x="565" y="1028" font-size="8.3" fill="#8A8A84" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">见 README：no LLM call needed</text>
+
+<rect x="1070" y="910" width="510" height="150" rx="12" fill="#F7F5EE" stroke="#DEDED8" stroke-width="1.6"/>
+<text x="1090" y="936" font-size="11.5" font-weight="700" fill="#3A3A36" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">沙箱真的独立于 agent 吗？</text>
+<text x="1090" y="958" font-size="9.3" fill="#5C5C56" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">还没有。SandboxWorld 目前是进程内 dict，</text>
+<text x="1090" y="974" font-size="9.3" fill="#5C5C56" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">没有真正的进程隔离——"独立于 agent 自陈"</text>
+<text x="1090" y="990" font-size="9.3" fill="#5C5C56" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">相对 evidence yaml 成立，相对完全对抗性</text>
+<text x="1090" y="1006" font-size="9.3" fill="#5C5C56" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">的 agent 还不成立——这是 E2B 要补的那块。</text>
+<text x="1090" y="1028" font-size="8.3" fill="#8A8A84" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">见 spec：Drawbacks and open risks</text>
+
+<!-- ===================== 底部：怎么读 + 状态 ===================== -->
+<rect x="20" y="1076" width="760" height="150" rx="12" fill="#FDF3E3" stroke="#D9A441" stroke-width="1.6"/>
+<text x="40" y="1102" font-size="13" font-weight="700" fill="#8A5A1E" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">怎么读（写给非技术读者）</text>
+<text x="40" y="1126" font-size="10" fill="#6B5410" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">上面两条横线跑的是同一个构造出来的提案——上面守规矩，下面抢跑，中间虚线标出两边在第 3 步分道。</text>
+<text x="40" y="1146" font-size="10" fill="#6B5410" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">橙色＝没人拦、自己执行了；红色＝这一步出问题（上面被拦下，下面没拦住）；</text>
+<text x="40" y="1166" font-size="10" fill="#6B5410" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">灰色虚线＝规矩生效后，后面几步压根没机会发生。</text>
+<text x="40" y="1188" font-size="10" fill="#6B5410" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">沙箱不是真的在打电话、发微信、登网页——它记的是「这件事到底发生了没」。</text>
+<text x="40" y="1210" font-size="9.5" font-weight="700" fill="#8A5A1E" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">一句话：判断逻辑没变，变的是判断完之后有没有地方真的拦、真的能被查。</text>
+
+<rect x="810" y="1076" width="770" height="150" rx="12" fill="#F7F5EE" stroke="#DEDED8" stroke-width="1.6"/>
+<text x="830" y="1102" font-size="13" font-weight="700" fill="#3A3A36" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">状态与来源</text>
+<text x="830" y="1126" font-size="10" fill="#5C5C56" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">状态：设计阶段，spec 已确认，尚未实现——这张图不代表已经跑通的结论。</text>
+<text x="830" y="1146" font-size="10" fill="#5C5C56" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">修订记录：早期草稿曾让两臂走不同提案，导致 governed 的拦截会被误记成新机制</text>
+<text x="830" y="1166" font-size="10" fill="#5C5C56" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">的功劳——已改为两臂共用同一提案，见 test_both_arms_receive_the_same_proposed_plan。</text>
+<text x="830" y="1188" font-size="10" fill="#5C5C56" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">spec：docs/superpowers/specs/2026-07-31-two-arm-sandbox-experiment-design.md</text>
+<text x="830" y="1210" font-size="9.3" fill="#8A8A84" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">写法参考：Rust RFC（alternatives/drawbacks）、Amazon PR/FAQ（最难问题自答）、Nygard ADR（决策跟代价）</text>
+</svg>
