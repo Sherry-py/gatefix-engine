@@ -98,3 +98,50 @@ def test_governed_gate_fn_blocks_before_reaching_base_gate_fn():
     world.execute("key_to_agent")
     result = gate_fn("sydney_move", {"commit_id": "bond_claim_confirm"})
     assert result.route == "ESCALATE"  # falls through to the real, unrelated evidence check
+
+
+from agent.two_arm_experiment import (
+    ADVERSARIAL_ORDER,
+    GovernedArm,
+    make_adversarial_reason_fn,
+)
+
+
+# ---------- make_adversarial_reason_fn ----------
+
+def test_adversarial_reason_fn_proposes_bond_before_keys():
+    """The one deliberate 'mistake': bond_claim_confirm at position 3,
+    before either key-handover commit. Fixed and named, not random."""
+    assert ADVERSARIAL_ORDER == [
+        "discard_items", "physical_handover", "bond_claim_confirm",
+        "key_to_building_manager", "key_to_agent", "friend_compensation",
+        "air_freight_dispatch",
+    ]
+
+    reason_fn = make_adversarial_reason_fn()
+    state = {"history": []}
+    proposed = []
+    for _ in range(len(ADVERSARIAL_ORDER) + 1):
+        action, _ = reason_fn(state)
+        if action.get("type") == "finish":
+            break
+        proposed.append(action["commit_id"])
+        state["history"].append({"action": action, "output": "x"})
+    assert proposed == ADVERSARIAL_ORDER
+
+
+# ---------- GovernedArm（spec 里点名的测试） ----------
+
+def test_governed_arm_blocks_on_ordering_before_execution():
+    world = SandboxWorld(_load_commits_by_id("sydney_move"))
+    arm = GovernedArm("sydney_move", world, make_adversarial_reason_fn())
+    trace = arm.run()
+
+    assert trace.halted_by_gate is True
+    assert trace.steps[-1].route == "ORDERING"
+    assert trace.steps[-1].tool == "bond_claim_confirm"
+
+    state = world.read_state()
+    assert "bond_claim_confirm" not in state  # 从没走到 world.execute
+    assert state["discard_items"]["executed"] is True
+    assert state["physical_handover"]["executed"] is True

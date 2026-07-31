@@ -74,3 +74,56 @@ def make_governed_gate_fn(case: str, world: SandboxWorld) -> GateFn:
         return base_gate_fn(context, action)
 
     return gate_fn
+
+
+ADVERSARIAL_ORDER = [
+    "discard_items",
+    "physical_handover",
+    "bond_claim_confirm",
+    "key_to_building_manager",
+    "key_to_agent",
+    "friend_compensation",
+    "air_freight_dispatch",
+]
+
+
+def make_adversarial_reason_fn() -> ReasonFn:
+    """写死的对抗性提案，governed/ungoverned 两臂共用同一个——唯一"错误"是
+    把 bond_claim_confirm 提到两次钥匙交接之前。不是随机、不是 LLM，可
+    复现、可解释（见 spec 的 Alternatives considered and rejected）。这个
+    提案本身从没在现实里发生过——是构造出来测试新机制的输入，不是历史
+    重现（见 spec"The gap, concretely"一节）。"""
+
+    def reason_fn(state: dict):
+        processed = {h["action"].get("commit_id") for h in state.get("history", [])}
+        remaining = [cid for cid in ADVERSARIAL_ORDER if cid not in processed]
+        if not remaining:
+            return {"type": "finish", "output": "adversarial proposal exhausted"}, 0
+        next_id = remaining[0]
+        return {"type": "tool", "tool": next_id, "commit_id": next_id}, 0
+
+    return reason_fn
+
+
+class GovernedArm:
+    """route==PASS 才调用 world.execute；ORDERING 硬性阻断在
+    make_governed_gate_fn 里生效。世界永远不会在 requires 未满足时被这条臂
+    调用——这是靠 GatedAgentLoop 现有的"非 PASS 绝不调 tool_fn"契约保证的，
+    这个类自己没有写任何新规则。"""
+
+    def __init__(self, case: str, world: SandboxWorld, reason_fn: ReasonFn,
+                 max_steps: int = 8):
+        self.world = world
+        self.loop = GatedAgentLoop(
+            gate_fn=make_governed_gate_fn(case, world),
+            tool_fn=self._tool_fn,
+            reason_fn=reason_fn,
+            max_steps=max_steps,
+        )
+
+    def _tool_fn(self, action: dict):
+        self.world.execute(action["commit_id"])
+        return f"executed {action['commit_id']}", 1
+
+    def run(self) -> LoopTrace:
+        return self.loop.run(context="sydney_move", initial_state={})
