@@ -182,3 +182,27 @@ def test_ungoverned_arm_reaches_contradictory_state():
     # 那两步更小——它真的抢在前面发生了
     assert state["bond_claim_confirm"]["seq"] < state["key_to_building_manager"]["seq"]
     assert state["bond_claim_confirm"]["seq"] < state["key_to_agent"]["seq"]
+
+
+def test_both_arms_receive_the_same_proposed_plan():
+    """Regression test for the exact bug this design was corrected for: an
+    earlier draft had governed and ungoverned arms proposing different
+    sequences, which meant a governed 'block' couldn't be attributed to the
+    new ordering mechanism specifically (see spec's Component design
+    section). Both arms are handed the same reason_fn; the sequence of
+    commit_ids each arm attempted must agree everywhere both arms actually
+    got that far — governed's attempted list must be an exact prefix of
+    ungoverned's."""
+    shared_reason_fn = make_adversarial_reason_fn()
+
+    g_world = SandboxWorld(_load_commits_by_id("sydney_move"))
+    g_trace = GovernedArm("sydney_move", g_world, shared_reason_fn).run()
+    g_attempted = [s.tool for s in g_trace.steps]
+
+    u_world = SandboxWorld(_load_commits_by_id("sydney_move"))
+    u_trace = UngovernedArm(u_world, shared_reason_fn).run()
+    u_attempted = [s.commit_id for s in u_trace.steps]
+
+    assert g_attempted == u_attempted[:len(g_attempted)]
+    assert g_attempted[-1] == "bond_claim_confirm"
+    assert len(u_attempted) == 7
