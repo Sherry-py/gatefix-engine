@@ -166,7 +166,7 @@
 <text x="800" y="850" font-size="10" fill="#5C5C56" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">两份终态都是 world.read_state() 的原始输出，不是 harness 断言的叙事——governed / ungoverned 各自跑在独立的 SandboxWorld 实例上</text>
 
 <!-- ===================== 诚实代价（PR/FAQ 式最难问题） ===================== -->
-<text x="800" y="896" font-size="13" font-weight="700" fill="#3A3A36" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">最难回答的三个问题（不是等审稿人问，先自己写出来）</text>
+<text x="800" y="896" font-size="13" font-weight="700" fill="#3A3A36" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">三个关键问题：设计取舍与已知局限</text>
 
 <rect x="20" y="910" width="510" height="150" rx="12" fill="#F7F5EE" stroke="#DEDED8" stroke-width="1.6"/>
 <text x="40" y="936" font-size="11.5" font-weight="700" fill="#3A3A36" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">为什么不是随机试验、报违规率？</text>
@@ -201,11 +201,10 @@
 <text x="40" y="1188" font-size="10" fill="#6B5410" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">沙箱不是真的在打电话、发微信、登网页——它记的是「这件事到底发生了没」。</text>
 <text x="40" y="1210" font-size="9.5" font-weight="700" fill="#8A5A1E" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">一句话：判断逻辑没变，变的是判断完之后有没有地方真的拦、真的能被查。</text>
 
-<rect x="810" y="1076" width="770" height="150" rx="12" fill="#F7F5EE" stroke="#DEDED8" stroke-width="1.6"/>
+<rect x="810" y="1076" width="770" height="128" rx="12" fill="#F7F5EE" stroke="#DEDED8" stroke-width="1.6"/>
 <text x="830" y="1102" font-size="13" font-weight="700" fill="#3A3A36" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">状态与来源</text>
 <text x="830" y="1126" font-size="10" fill="#5C5C56" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">状态：已实现——见 world/sydney_move_world.py、agent/two_arm_experiment.py、</text>
 <text x="830" y="1146" font-size="10" fill="#5C5C56" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">tests/test_two_arm_experiment.py；跑 python agent/two_arm_experiment.py 看实时报告。</text>
-<text x="830" y="1166" font-size="10" fill="#5C5C56" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">修订记录：两臂曾用不同提案、ungoverned 终态描述也曾算错——都已修正，见测试与 spec。</text>
+<text x="830" y="1166" font-size="10" fill="#5C5C56" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">两臂共用同一提案这件事本身有回归测试守着：test_both_arms_receive_the_same_proposed_plan。</text>
 <text x="830" y="1188" font-size="10" fill="#5C5C56" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">spec：docs/superpowers/specs/2026-07-31-two-arm-sandbox-experiment-design.md</text>
-<text x="830" y="1210" font-size="9.3" fill="#8A8A84" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">写法参考：Rust RFC（alternatives/drawbacks）、Amazon PR/FAQ（最难问题自答）、Nygard ADR（决策跟代价）</text>
 </svg>
