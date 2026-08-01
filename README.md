@@ -217,11 +217,23 @@ passport）——都是"在推理和真正执行之间插一道独立判定"的�
 
 ![GateFix sandbox verification — two real execution traces of the same 7 commits, where they diverge, and the three hardest questions answered on the diagram itself](docs/sandbox_verification.svg)
 
-这张图不是又一张组件架构图，是同一组 7 个 commit 的**两条真实执行轨迹**，而且两臂拿到的是**完全相同的提案**——都在第 3 步尝试把 `bond_claim_confirm` 提前到两次钥匙交接之前。上面一条有 gate，提案在这一步被硬性拦下，后面 4 步压根没机会发生；下面一条没有 gate，同一个提案直接放行，7 步"全部执行"。两臂共用同一提案是审阅时才修正的：早期草稿让 governed 按正常顺序走、ungoverned 才乱序，导致 governed 的拦截其实来自跟这次实验无关的另一个 ESCALATE 分支，测不到新机制——控制变量改成"提案相同、只切 gate 开关"之后才是真的对比。
+这张图不是组件架构图，是同一组 7 个 commit 的**两条真实执行轨迹**。两臂拿到的是
+**完全相同的提案**——都在第 3 步尝试把 `bond_claim_confirm` 提前到两次钥匙交接之前，
+唯一差别是有没有 gate：上面一条有 gate，提案在这一步被硬性拦下，后面 4 步没有机会
+发生；下面一条没有 gate，同一个提案直接放行，7 步全部执行。两臂共用同一个提案，是
+为了让 governed 的拦截能明确归因于新的 Sequence 机制本身，不会和其他判定分支的结果
+混在一起。
 
-**这是构造场景，不是历史**：真实案例里钥匙确实交了（`key_to_agent` 经 AUTO_REPAIR 后 PASS），真实的 `bond_claim_confirm` ESCALATE 是退款户名不符，跟顺序无关，`engine.py` 今天就在正确处理这件事，运行 `python engine.py run --case=sydney_move` 可见。图里"提前确认 Bond"这个提案从没在现实里发生过，是专门构造出来测试新 Sequence 机制的对抗性输入，不是历史重现——图的最上方用一个醒目的橙色框把这句话摆在最前面，不留给读者自己发现。
+**这是构造场景，不是历史**：真实案例里钥匙确实交了（`key_to_agent` 经 AUTO_REPAIR 后
+PASS），真实的 `bond_claim_confirm` ESCALATE 是退款户名不符，跟顺序无关，`engine.py`
+今天就在正确处理这件事，运行 `python engine.py run --case=sydney_move` 可见。图里
+"提前确认 Bond"这个提案从没在现实里发生过，是专门构造出来测试新 Sequence 机制的
+对抗性输入。
 
-两条轨迹跑完后从 `SandboxWorld.read_state()` 读回的终态，一个自洽、一个自相矛盾——矛盾是从沙箱里独立读出来的事实，不是图自己讲的故事。图的下半部分不是"这张图想说明什么"的自夸，是三个大概率会被审稿人问到的问题（为什么不是统计违规率、为什么不用真 LLM planner、沙箱是否真的独立于 agent）连同诚实答案一起摆出来，参考的是 Rust RFC 的 alternatives/drawbacks、Amazon PR/FAQ 的"最难问题自答"、Nygard ADR 的"决策后必须跟代价"这几种写法的共同点：**不等读者发现弱点，自己先写出来**。
+两条轨迹跑完后从 `SandboxWorld.read_state()` 读回的终态，一个自洽、一个自相矛盾——
+矛盾是从沙箱里独立读出来的事实，不是图自己讲的故事。图的下半部分列了三个关于这套
+机制本身局限性的问题（为什么不是统计违规率、为什么不用真 LLM planner、沙箱是否真的
+独立于 agent），连同诚实答案一起呈现。
 
 **如实说明现状**：这套机制已经实现并测过（`world/sydney_move_world.py` + `agent/two_arm_experiment.py` + `tests/test_two_arm_experiment.py`），跑 `python agent/two_arm_experiment.py` 能看到实时的两臂对比报告。仍然按 spec 里"Punted"部分列的边界:没接 E2B(进程内实现,还不是真正对 agent 隔离的沙箱)、没接 LangGraph/MCP server(同款插槽,本次没接)、`requires:` 依赖图没有第三方机械校验。
 
@@ -407,10 +419,9 @@ liability assessment → commit backward-chaining → executor binding → cheap
 reversible probing → evidence-package gating → custody chain → settlement
 audit). Those notes are private working material, not a publication.
 
-This repo is public on GitHub. Third-party names were already replaced with
-role labels from the start; on top of that, this pass removed the exact
-suburb (kept at city level: Sydney) and replaced every dollar amount with a
-`low`/`mid`/`high` magnitude tier (`engine.py::VALUE_TIER_SCALE`) or a
-round representative number — decision structure, routing outcomes, and
-evidence gaps are unchanged, only the numbers and precise location are
+This repo is public on GitHub. Third-party names are replaced with role
+labels, the location is kept at city level (Sydney, no suburb), and every
+dollar amount is a `low`/`mid`/`high` magnitude tier (`engine.py::VALUE_TIER_SCALE`)
+or a round representative number — decision structure, routing outcomes, and
+evidence gaps are the real thing; only the numbers and precise location are
 generalized.
