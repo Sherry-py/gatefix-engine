@@ -235,7 +235,7 @@ PASS），真实的 `bond_claim_confirm` ESCALATE 是退款户名不符，跟顺
 机制本身局限性的问题（为什么不是统计违规率、为什么不用真 LLM planner、沙箱是否真的
 独立于 agent），连同诚实答案一起呈现。
 
-**如实说明现状**：这套机制已经实现并测过（`world/sydney_move_world.py` + `agent/two_arm_experiment.py` + `tests/test_two_arm_experiment.py`），跑 `python agent/two_arm_experiment.py` 能看到实时的两臂对比报告。仍然按 spec 里"Punted"部分列的边界:没接 E2B(进程内实现,还不是真正对 agent 隔离的沙箱)、没接 LangGraph/MCP server(同款插槽,本次没接)、`requires:` 依赖图没有第三方机械校验。
+**如实说明边界**：`SandboxWorld`（`world/sydney_move_world.py`）是进程内实现，不是真正对 agent 隔离的沙箱，不接 E2B；`requires:` 依赖图是从真实案例断言出来的，没有第三方机械校验；Sequence 检查只在 Agent loop（`agent/two_arm_experiment.py`）这一处生效，LangGraph / MCP server 走的是同一份判定内核，但没有接这层执行后端。跑 `python agent/two_arm_experiment.py` 能看到两臂对比报告，测试见 `tests/test_two_arm_experiment.py`。
 
 上面四张图分别是内核骨架、判定链、自主度谱系、沙箱验证——运行方式见开头"怎么跑"。
 下面看这套判定逻辑具体怎么接进三种真实部署形态（`python engine.py run` 只是"判一次"，
@@ -358,9 +358,9 @@ python agent/langgraph_loop.py --case=sydney_move
 │   ├── architecture.svg                      # 机制图①：六节点最小骨架 + 公式绑定
 │   ├── decision_chain.svg                    # 机制图②：判定链主干 + 形式化表达 + 完整四态判定式
 │   ├── autonomy_layering.svg                 # 机制图③：四态自主度谱系（引擎/配置分层见 project_structure.svg）
-│   └── sandbox_verification.svg              # 机制图④：沙箱验证，同一提案两臂对比（已实现，见 world/ + agent/two_arm_experiment.py）
+│   └── sandbox_verification.svg              # 机制图④：沙箱验证，同一提案两臂对比，见 world/ + agent/two_arm_experiment.py
 ├── docs/superpowers/specs/
-│   └── 2026-07-31-two-arm-sandbox-experiment-design.md  # 沙箱验证机制的完整 spec，已实现
+│   └── 2026-07-31-two-arm-sandbox-experiment-design.md  # 沙箱验证机制的完整 spec
 ├── gate.py                                   # 引擎核心：GateConfig（阈值/权重）+ GateRecord（判定记录结构）
 │                                              # quality_score / route / is_commit / loop_mode /
 │                                              # expectation_gate / expected_external_risk 六个公式的代码实现

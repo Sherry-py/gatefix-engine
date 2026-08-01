@@ -43,7 +43,7 @@
 <text x="750" y="264" font-size="14.5" font-weight="700" fill="#A03B45" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">判定内核——领域无关，任何场景都不改这两个文件</text>
 <text x="750" y="286" font-size="10.5" fill="#A03B45" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">gate.py：GateConfig（阈值/权重）+ quality_score + route() 三态路由 + GateRecord</text>
 <text x="750" y="306" font-size="10.5" fill="#A03B45" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">engine.py：CLI 运行时 + resolve_precondition()（四种部署形态共用同一份判定逻辑）</text>
-<text x="750" y="330" font-size="9.5" font-weight="700" fill="#8A5A1E" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">这次沙箱验证层新增的 Sequence 检查也不碰这里——组合，不是修改</text>
+<text x="750" y="330" font-size="9.5" font-weight="700" fill="#8A5A1E" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">沙箱验证层的 Sequence 检查也不碰这里——组合，不是修改</text>
 
 <path d="M750 352 L750 388" fill="none" stroke="#6B6B68" stroke-width="1.8" marker-end="url(#ps-arrM)"/>
 <text x="766" y="374" font-size="9.5" fill="#55554F" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">四种形态都调 resolve_precondition()</text>
@@ -87,14 +87,14 @@
 <text x="606" y="562" font-size="9.5" fill="#2F6B44" font-weight="700" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">tool_fn 从「打印字符串」换成 world.execute()</text>
 
 <rect x="200" y="578" width="1100" height="120" rx="14" fill="#E3F5F2" stroke="#2E9C8F" stroke-width="2"/>
-<text x="750" y="606" font-size="13.5" font-weight="700" fill="#1F6E64" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">沙箱验证层（新增）——不是第五种部署形态，是「PASS 之后」这个共用插槽的第一次真实实现</text>
+<text x="750" y="606" font-size="13.5" font-weight="700" fill="#1F6E64" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">沙箱验证层——不是第五种部署形态，是「PASS 之后」这个共用插槽的真实实现</text>
 <text x="750" y="628" font-size="10" fill="#1F6E64" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">world/sydney_move_world.py：SandboxWorld——记录 commit 真实执行的状态，不做判定；execute() 违反 requires 照样记录、只是附带抛异常</text>
 <text x="750" y="648" font-size="10" fill="#1F6E64" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">agent/two_arm_experiment.py：check_sequence_precondition（新硬性前置，组合在 make_case_gate_fn 前面）+ GovernedArm / UngovernedArm</text>
-<text x="750" y="670" font-size="9" fill="#5C5C56" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">本次范围：进程内实现，不接 E2B；只在 Agent loop 接了执行后端，LangGraph/MCP server 是同款插槽本次未接（见下方灰色虚线）</text>
+<text x="750" y="670" font-size="9" fill="#5C5C56" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">范围：进程内实现，不接 E2B；只在 Agent loop 生效，LangGraph/MCP server 是同款插槽但没有接这层执行后端（见下方灰色虚线）</text>
 
 <path d="M930 540 C930 560, 850 578, 810 578" fill="none" stroke="#B0B0A8" stroke-width="1.4" stroke-dasharray="5,4" marker-end="url(#ps-arrGrey)"/>
 <path d="M1265 536 C1265 560, 1000 578, 940 578" fill="none" stroke="#B0B0A8" stroke-width="1.4" stroke-dasharray="5,4" marker-end="url(#ps-arrGrey)"/>
-<text x="1080" y="562" font-size="8.6" fill="#8A8A84" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">同款插槽，未接（punted）</text>
+<text x="1080" y="562" font-size="8.6" fill="#8A8A84" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">同款插槽，未接</text>
 
 <!-- ===== Row E: 测试横切 ===== -->
 <path d="M750 698 L750 730" fill="none" stroke="#6B6B68" stroke-width="1.4" stroke-dasharray="4,4"/>
@@ -117,7 +117,7 @@
 <text x="780" y="880" font-size="13" font-weight="700" fill="#8A5A1E" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">怎么读（写给非技术读者）</text>
 <text x="780" y="904" font-size="10.2" fill="#6B5410" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">黄色＝会随场景变化的东西（数据）；红色＝判断逻辑本身，不管</text>
 <text x="780" y="922" font-size="10.2" fill="#6B5410" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">场景怎么换都不动；蓝/紫/黄绿＝三种"接进别的系统"的方式；</text>
-<text x="780" y="944" font-size="10.2" fill="#6B5410" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">青色＝这次新加的，用来验证"没有门禁真的会出事"这件事。</text>
+<text x="780" y="944" font-size="10.2" fill="#6B5410" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">青色＝沙箱验证层，用来验证"没有门禁真的会出事"这件事。</text>
 <text x="780" y="966" font-size="10.2" fill="#6B5410" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">虚线框＝整个仓库的边界——里面没有一处真的连外部系统或调用</text>
 <text x="780" y="984" font-size="10.2" fill="#6B5410" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">真实模型，这也是为什么整套东西能被完整、确定性地重复跑通。</text>
 <text x="780" y="1008" font-size="9.5" font-weight="700" fill="#8A5A1E" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">一句话：数据会换，判断逻辑不换，新功能永远是外挂不是改写。</text>

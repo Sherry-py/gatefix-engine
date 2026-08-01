@@ -17,7 +17,7 @@
 <!-- ===================== 判定内核 ===================== -->
 <rect x="100" y="162" width="1400" height="54" rx="10" fill="#FDECEE" stroke="#CE5560" stroke-width="1.6"/>
 <text x="800" y="184" font-size="12" font-weight="700" fill="#A03B45" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">判定内核 gate.py + engine.py::resolve_precondition —— CLI / Agent loop / LangGraph / MCP server 四种部署形态共用同一份代码</text>
-<text x="800" y="204" font-size="10" fill="#6E6E68" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">这次只在 Agent loop 接了下面这个执行后端；LangGraph / MCP server 是同款插槽，本次未接（punted，见 spec）</text>
+<text x="800" y="204" font-size="10" fill="#6E6E68" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">Sequence 检查只在 Agent loop 这一处生效；LangGraph / MCP server 走同一份判定内核，但没有接这层执行后端</text>
 
 <text x="800" y="240" font-size="10.5" font-weight="700" fill="#55554F" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">依赖关系（断言自真实案例，未机械校验——见下方「代价」栏）：bond_claim_confirm 需要 key_to_building_manager ∧ key_to_agent；key_to_agent 需要 discard_items ∧ physical_handover</text>
 
@@ -171,7 +171,7 @@
 <rect x="20" y="910" width="510" height="150" rx="12" fill="#F7F5EE" stroke="#DEDED8" stroke-width="1.6"/>
 <text x="40" y="936" font-size="11.5" font-weight="700" fill="#3A3A36" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">为什么不是随机试验、报违规率？</text>
 <text x="40" y="958" font-size="9.3" fill="#5C5C56" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">统计发生率需要给定 N、随机种子、置信</text>
-<text x="40" y="974" font-size="9.3" fill="#5C5C56" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">区间——这次都没有。一个能被人工逐步</text>
+<text x="40" y="974" font-size="9.3" fill="#5C5C56" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">区间——这套演示都没有给。一个能被人工逐步</text>
 <text x="40" y="990" font-size="9.3" fill="#5C5C56" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">核对的具体违规，现阶段比一个数字更有用，</text>
 <text x="40" y="1006" font-size="9.3" fill="#5C5C56" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">但这确实是发生率、不是能力上限的证明。</text>
 <text x="40" y="1028" font-size="8.3" fill="#8A8A84" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">见 spec：Alternatives considered and rejected</text>
@@ -202,8 +202,8 @@
 <text x="40" y="1210" font-size="9.5" font-weight="700" fill="#8A5A1E" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">一句话：判断逻辑没变，变的是判断完之后有没有地方真的拦、真的能被查。</text>
 
 <rect x="810" y="1076" width="770" height="128" rx="12" fill="#F7F5EE" stroke="#DEDED8" stroke-width="1.6"/>
-<text x="830" y="1102" font-size="13" font-weight="700" fill="#3A3A36" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">状态与来源</text>
-<text x="830" y="1126" font-size="10" fill="#5C5C56" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">状态：已实现——见 world/sydney_move_world.py、agent/two_arm_experiment.py、</text>
+<text x="830" y="1102" font-size="13" font-weight="700" fill="#3A3A36" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">代码位置</text>
+<text x="830" y="1126" font-size="10" fill="#5C5C56" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">world/sydney_move_world.py、agent/two_arm_experiment.py、</text>
 <text x="830" y="1146" font-size="10" fill="#5C5C56" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">tests/test_two_arm_experiment.py；跑 python agent/two_arm_experiment.py 看实时报告。</text>
 <text x="830" y="1166" font-size="10" fill="#5C5C56" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">两臂共用同一提案这件事本身有回归测试守着：test_both_arms_receive_the_same_proposed_plan。</text>
 <text x="830" y="1188" font-size="10" fill="#5C5C56" font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif">spec：docs/superpowers/specs/2026-07-31-two-arm-sandbox-experiment-design.md</text>
