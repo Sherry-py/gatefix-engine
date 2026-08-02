@@ -2,6 +2,22 @@
 
 [![CI](https://github.com/Sherry-py/gatefix-engine/actions/workflows/ci.yml/badge.svg)](https://github.com/Sherry-py/gatefix-engine/actions/workflows/ci.yml)
 
+> **一句话锚点：** Model 负责「知道」，GateFix 负责「放不放行」——诊断出问题不代表会停下来，这道分界线才是。
+
+```
+$ python engine.py run --case=sydney_move
+
+--- Commit: 扔弃物品 (discard_items) ---
+  R=1.00 C=1.00 O=1.00 Ro=1.00 → Q=1.000  route=PASS
+
+--- Commit: Bond claim 确认 (bond_claim_confirm) ---
+  R=0.15 C=1.00 O=1.00 Ro=1.00 → Q=0.787  route=ESCALATE
+  说明: 退款账户户名='第三方' ≠ 委托人姓名 —— 需人工核实关系
+  → 升级给人：中介 → RBO 平台 终审
+```
+
+同一套证据打分规则，7 个真实决策点里有 5 个直接放行、1 个自动补证后放行、1 个因为「钱最终打给谁」这个细节对不上而升级人工——不是模型判断力不够，是这道分界线在起作用。
+
 **TL;DR (English):** This project distills a judgment rule from a real,
 high-stakes business process — not from a need to govern AI agents. The
 rule answers: when a human and a machine collaborate on an irreversible
