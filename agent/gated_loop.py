@@ -38,7 +38,7 @@ if str(BASE_DIR) not in sys.path:
 
 from gate import (  # noqa: E402
     GateConfig, ReasonCode, classify_regular_reason_code, build_gate_contract,
-    EXIT_CODE, EXIT_CODE_INTERNAL_ERROR,
+    EXIT_CODE, EXIT_CODE_INTERNAL_ERROR, safe_score, safe_repair,
 )
 from engine import load_yaml  # noqa: E402
 
@@ -124,7 +124,17 @@ ReasonFn = Callable[[dict], "tuple[dict, int]"]
 class GatedAgentLoop:
     """核心契约：gate_fn 每步只返回 PASS 或阻断（ESCALATE/BYPASS_TO_HUMAN
     已在适配层收敛为非 PASS）；非 PASS 时 tool_fn 绝不被调用。没有开关能
-    关掉这条——这是这个类存在的全部意义。"""
+    关掉这条——这是这个类存在的全部意义。
+
+    fail-closed 兜底（任务 2）：gate_fn 是调用方传进来的，可以是
+    make_case_gate_fn 那种内置实现，也可以是任何自定义函数——这里是所有
+    动作执行前的唯一收口点，所以在这一层再加一道兜底：gate_fn 本身抛出的
+    任何异常都收敛成阻断（BYPASS_TO_HUMAN），不会被异常冒泡绕过、变成
+    "gate 没判定就默认放行"。make_case_gate_fn/resolve_precondition 内部
+    已经对 score_fn/repair_fn 做了 fail-closed（见 gate.py::safe_score/
+    safe_repair），这里是给"gate_fn 自己就有 bug"这类更外层的故障上的
+    第二道保险，两者不是重复：内层管的是 evaluator 的故障，这里管的是
+    gate_fn 整体（包括适配层自己的代码）的故障。"""
 
     def __init__(self, gate_fn: GateFn, tool_fn: ToolFn, reason_fn: ReasonFn,
                  max_steps: int = 6):
@@ -144,7 +154,15 @@ class GatedAgentLoop:
 
             tool_name = action.get("tool", "unknown")
             t0 = time.perf_counter()
-            gate = self.gate_fn(context, action)
+            try:
+                gate = self.gate_fn(context, action)
+            except Exception as exc:  # noqa: BLE001 — fail-closed 兜底，见类 docstring
+                gate = GateResult(
+                    route="BYPASS_TO_HUMAN", R=0, C=0, O=0, Ro=0, Q=0,
+                    verifiable_ext=False,
+                    reason=f"gate_fn raised {type(exc).__name__}: {exc}",
+                    reason_code=ReasonCode.EVALUATOR_FAULT,
+                )
             gate_ms = (time.perf_counter() - t0) * 1000
             gate_cost = _gate_cost_estimate(gate)
 
@@ -221,13 +239,18 @@ def make_case_gate_fn(case: str) -> GateFn:
             # reason 里，不影响最终恒为 BYPASS_TO_HUMAN 的路由。
             if commit.get("precondition_fn"):
                 score_fn = registry[commit["precondition_fn"]]
-                pre = score_fn(evidence)
-                pre_allowed = config.expectation_gate(
-                    pre.get("contains_promise", True),
-                    pre.get("has_feasibility_evidence", False),
-                )
-                pre_route = "PASS" if pre_allowed else "ESCALATE"
-                reason = f"承诺阶段：{pre_route}——{pre['notes']}　{reason}"
+                pre, pre_fault = safe_score(score_fn, evidence)
+                # 同 engine.py：预检异常不改变这条分支恒为 BYPASS_TO_HUMAN
+                # 的终态，只是不让异常冒泡崩掉整个 gate_fn 调用。
+                if pre_fault:
+                    reason = f"承诺阶段：预检异常（{pre['notes']}）　{reason}"
+                else:
+                    pre_allowed = config.expectation_gate(
+                        pre.get("contains_promise", True),
+                        pre.get("has_feasibility_evidence", False),
+                    )
+                    pre_route = "PASS" if pre_allowed else "ESCALATE"
+                    reason = f"承诺阶段：{pre_route}——{pre['notes']}　{reason}"
             return GateResult(
                 route="BYPASS_TO_HUMAN", R=0, C=0, O=0, Ro=0, Q=0,
                 verifiable_ext=False,
@@ -266,9 +289,17 @@ def resolve_precondition(
     soft_commit 分支：不看 R/C/O/Ro 阈值，改看 contains_promise /
     has_feasibility_evidence 这两个布尔量（expectation_gate）。
     常规分支：AUTO_REPAIR 只在这个函数内部出现，循环收敛后只会返回
-    PASS 或 ESCALATE——调用方永远只看到二态结果。"""
+    PASS 或 ESCALATE——调用方永远只看到二态结果。任务 2（fail-closed）：
+    score_fn/repair_fn 抛异常时的第三种终态是 BYPASS_TO_HUMAN，不是
+    PASS，也不是普通的 ESCALATE——见 gate.py::safe_score/safe_repair。"""
     if soft_commit:
-        result = score_fn(evidence)
+        result, fault = safe_score(score_fn, evidence)
+        if fault:
+            return GateResult(
+                route="BYPASS_TO_HUMAN", R=0, C=0, O=0, Ro=0, Q=0,
+                verifiable_ext=False, reason=result["notes"],
+                reason_code=ReasonCode.EVALUATOR_FAULT,
+            )
         allowed = config.expectation_gate(
             result.get("contains_promise", True),
             result.get("has_feasibility_evidence", False),
@@ -288,13 +319,29 @@ def resolve_precondition(
     dry_rounds = 0
     repair_attempts = 0
     while True:
-        result = score_fn(ev)
+        result, fault = safe_score(score_fn, ev)
+        if fault:
+            return GateResult(
+                route="BYPASS_TO_HUMAN", R=0, C=0, O=0, Ro=0, Q=0,
+                verifiable_ext=False, dry_rounds=dry_rounds,
+                repair_attempts=repair_attempts, reason=result["notes"],
+                reason_code=ReasonCode.EVALUATOR_FAULT,
+            )
         Q = config.quality_score(result["R"], result["C"], result["O"], result["Ro"])
         route = config.route(Q, result["verifiable_ext"], dry_rounds)
 
         if route == "AUTO_REPAIR" and repair_fn is not None:
             repair_attempts += 1
-            new_evidence = repair_fn(ev)
+            new_evidence, repair_fault = safe_repair(repair_fn, ev)
+            if repair_fault:
+                return GateResult(
+                    route="BYPASS_TO_HUMAN", R=result["R"], C=result["C"],
+                    O=result["O"], Ro=result["Ro"], Q=Q,
+                    verifiable_ext=result["verifiable_ext"], dry_rounds=dry_rounds,
+                    repair_attempts=repair_attempts,
+                    reason="repair_fn raised — fail-closed to BYPASS_TO_HUMAN",
+                    reason_code=ReasonCode.EVALUATOR_FAULT,
+                )
             if new_evidence == ev:
                 dry_rounds += 1
             else:

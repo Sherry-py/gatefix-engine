@@ -25,7 +25,7 @@ import yaml
 
 from gate import (
     GateConfig, GateRecord, ReasonCode, classify_regular_reason_code,
-    EXIT_CODE, EXIT_CODE_INTERNAL_ERROR,
+    EXIT_CODE, EXIT_CODE_INTERNAL_ERROR, safe_score, safe_repair,
 )
 
 BASE_DIR = Path(__file__).parent
@@ -48,13 +48,20 @@ def _resolve_regular_commit(config, score_fn, repair_fn, evidence, verbose=False
     server 的 authorize() 才发现。
 
     返回 (route, result, Q, dry_rounds, repair_attempts, reason_code)，route
-    只会是 PASS 或 ESCALATE。reason_code 用 gate.py::classify_regular_reason_code
+    只会是 PASS / ESCALATE / BYPASS_TO_HUMAN（后者是任务 2 的 fail-closed
+    兜底：score_fn/repair_fn 抛异常时的故障性失败，见 gate.py::safe_score/
+    safe_repair）。reason_code 用 gate.py::classify_regular_reason_code
     从收敛后的最终状态反推（任务 1：机器可判定的授权契约）。"""
     repair_fn_registered = repair_fn is not None
     dry_rounds = 0
     repair_attempts = 0
     while True:
-        result = score_fn(evidence)
+        result, fault = safe_score(score_fn, evidence)
+        if fault:
+            print(f"  [FAIL-CLOSED] {result['notes']} → 收敛到 BYPASS_TO_HUMAN，不默认 PASS")
+            return ("BYPASS_TO_HUMAN", result, 0.0, dry_rounds, repair_attempts,
+                    ReasonCode.EVALUATOR_FAULT)
+
         Q = config.quality_score(result["R"], result["C"], result["O"], result["Ro"])
         route = config.route(Q, result["verifiable_ext"], dry_rounds)
 
@@ -67,7 +74,11 @@ def _resolve_regular_commit(config, score_fn, repair_fn, evidence, verbose=False
         if route == "AUTO_REPAIR" and repair_fn is not None:
             repair_attempts += 1
             print(f"  [AUTO_REPAIR] 缺口可外部验证，尝试补证（第 {repair_attempts} 轮）...")
-            new_evidence = repair_fn(evidence)
+            new_evidence, repair_fault = safe_repair(repair_fn, evidence)
+            if repair_fault:
+                print("  [FAIL-CLOSED] repair_fn 异常 → 收敛到 BYPASS_TO_HUMAN，不默认 PASS")
+                return ("BYPASS_TO_HUMAN", result, Q, dry_rounds, repair_attempts,
+                        ReasonCode.EVALUATOR_FAULT)
             if new_evidence == evidence:
                 dry_rounds += 1  # 没有新证据
             else:
@@ -168,16 +179,23 @@ def run_case(case: str, verbose: bool = False):
             # 外部 client 误当成"预检 PASS = 已授权"绕开）。
             if commit.get("precondition_fn"):
                 score_fn = REGISTRY[commit["precondition_fn"]]
-                pre = score_fn(evidence)
-                pre_allowed = config.expectation_gate(
-                    pre.get("contains_promise", True),
-                    pre.get("has_feasibility_evidence", False),
-                )
-                pre_route = "PASS" if pre_allowed else "ESCALATE"
-                print(f"  [阶段一·承诺 expectation_gate] {pre['notes']}")
-                print(f"  Send(msg) 被允许={pre_allowed} → {pre_route}"
-                      "（仅记录，不影响最终 route——最终仍是 BYPASS_TO_HUMAN）")
-                stage_note = f"承诺阶段：{pre_route}——{pre['notes']}"
+                pre, pre_fault = safe_score(score_fn, evidence)
+                # pre_fault 不改变最终 route——这条分支的终态本来就恒为
+                # BYPASS_TO_HUMAN，预检从来不能决定 route（见上面的注释）；
+                # 这里只是不让预检本身的异常把整个 run_case 崩掉。
+                if pre_fault:
+                    print(f"  [阶段一·承诺 expectation_gate] [FAIL-CLOSED] {pre['notes']}")
+                    stage_note = f"承诺阶段：预检异常（{pre['notes']}），未影响最终旁路人工的判定"
+                else:
+                    pre_allowed = config.expectation_gate(
+                        pre.get("contains_promise", True),
+                        pre.get("has_feasibility_evidence", False),
+                    )
+                    pre_route = "PASS" if pre_allowed else "ESCALATE"
+                    print(f"  [阶段一·承诺 expectation_gate] {pre['notes']}")
+                    print(f"  Send(msg) 被允许={pre_allowed} → {pre_route}"
+                          "（仅记录，不影响最终 route——最终仍是 BYPASS_TO_HUMAN）")
+                    stage_note = f"承诺阶段：{pre_route}——{pre['notes']}"
                 if evidence.get("actual_settlement_tier") is not None:
                     stage_note += (
                         f"；实付阶段：{evidence.get('actual_settlement_form', '')}结清"
@@ -200,7 +218,19 @@ def run_case(case: str, verbose: bool = False):
         # ---------- 分支 2：软 commit，走 expectation_gate ----------
         if commit.get("soft_commit"):
             score_fn = REGISTRY[commit["precondition_fn"]]
-            result = score_fn(evidence)
+            result, fault = safe_score(score_fn, evidence)
+            if fault:
+                # fail-closed（任务 2）：软 commit 也不例外，evaluator 异常
+                # 绝不能被 expectation_gate 悄悄当成"没有 promise"而放行。
+                print(f"  [软 commit / expectation gate] [FAIL-CLOSED] {result['notes']}")
+                rec = GateRecord(
+                    commit_id=cid, commit_name=name, R=0, C=0, O=0, Ro=0, Q=0,
+                    route="BYPASS_TO_HUMAN", is_commit=is_commit, loop_mode=loop_mode,
+                    verifiable_ext=False, dry_rounds=0, notes=result["notes"],
+                    reason_code=ReasonCode.EVALUATOR_FAULT,
+                )
+                records.append(rec)
+                continue
             allowed = config.expectation_gate(
                 result.get("contains_promise", True),
                 result.get("has_feasibility_evidence", False),

@@ -69,6 +69,40 @@ def classify_regular_reason_code(*, route: str, Q: float, tau_repair: float,
     return ReasonCode.QUALITY_BELOW_REPAIR_THRESHOLD
 
 
+# ---------- fail-closed 语义 (REVISION_BRIEF.md 任务 2) ----------
+#
+# 区分两类失败：
+#   实质性拒绝（CQ 前置条件不满足）——score_fn 正常返回，只是分数不够格，
+#     走上面 classify_regular_reason_code 的正常路径，终态是 ESCALATE。
+#   故障性失败（评估器本身异常：超时/依赖缺失/代码 bug）——score_fn/
+#     repair_fn 抛异常，下面这两个函数兜住，不让异常冒泡到"默认放行"，
+#     终态固定 BYPASS_TO_HUMAN，reason_code=EVALUATOR_FAULT，明确标注这是
+#     故障不是证据问题。
+
+
+def safe_score(score_fn, evidence: dict) -> "tuple[dict, bool]":
+    """返回 (result, fault)。fault=True 时 result 是一个 fail-closed 占位
+    分数（全 0、verifiable_ext=False）——就算调用方忘记检查 fault 标志，
+    quality_score()/route() 算出来的也绝不可能是 PASS。"""
+    try:
+        return score_fn(evidence), False
+    except Exception as exc:  # noqa: BLE001 — fail-closed 就是要兜住任何异常
+        return {
+            "R": 0.0, "C": 0.0, "O": 0.0, "Ro": 0.0, "verifiable_ext": False,
+            "notes": f"[FAIL-CLOSED] evaluator raised {type(exc).__name__}: {exc}",
+        }, True
+
+
+def safe_repair(repair_fn, evidence: dict) -> "tuple[Optional[dict], bool]":
+    """返回 (new_evidence, fault)。fault=True 时 new_evidence 是 None——
+    调用方必须把这当成"补证失败"处理，不能当成"没有新证据"（dry round）
+    悄悄吞掉，两者要能被区分开。"""
+    try:
+        return repair_fn(evidence), False
+    except Exception as exc:  # noqa: BLE001
+        return None, True
+
+
 def build_gate_contract(*, gate_state: str, R: float, C: float, O: float,
                          Ro: float, reason_code: str,
                          auto_repair_available: bool,
