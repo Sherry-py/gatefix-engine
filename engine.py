@@ -20,13 +20,16 @@ import importlib
 import sys
 from pathlib import Path
 from datetime import datetime, timezone
+from typing import Optional
 
 import yaml
 
 from gate import (
     GateConfig, GateRecord, ReasonCode, classify_regular_reason_code,
     EXIT_CODE, EXIT_CODE_INTERNAL_ERROR, safe_score, safe_repair,
+    SCHEMA_VERSION,
 )
+from audit import append_gate_decision, build_audit_record, DEFAULT_AUDIT_LOG
 
 BASE_DIR = Path(__file__).parent
 
@@ -121,7 +124,7 @@ def parse_number(v):
     return v
 
 
-def run_case(case: str, verbose: bool = False):
+def run_case(case: str, verbose: bool = False, audit_log_path: Optional[Path] = None):
     commits_path = BASE_DIR / "commits" / f"{case}_commits.yaml"
     bindings_path = BASE_DIR / "bindings" / f"{case}_bindings.yaml"
     evidence_path = BASE_DIR / "evidence" / f"{case}_evidence.yaml"
@@ -291,7 +294,7 @@ def run_case(case: str, verbose: bool = False):
 
         records.append(rec)
 
-    # ---------- 写 Gate Record（JSONL） ----------
+    # ---------- 写 Gate Record（JSONL，最近一次 run 的快照，覆盖写） ----------
     out_path = BASE_DIR / "gate_record.jsonl"
     with open(out_path, "w", encoding="utf-8") as f:
         for rec in records:
@@ -299,6 +302,27 @@ def run_case(case: str, verbose: bool = False):
             entry["case"] = case
             entry["timestamp"] = datetime.now(timezone.utc).isoformat()
             f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+
+    # ---------- 写审计日志（JSONL，append-only，任务 4） ----------
+    # 这是真正的历史留痕，和上面 gate_record.jsonl 的"最近一次快照"是两回事
+    # （见 audit.py 模块 docstring）。诚实的失败语义：审计写入失败不会撤销
+    # 已经生效的判定（rec 已经在 records 里了），只是分开报告——见下面汇总
+    # 里的 audit_failures。
+    audit_path = audit_log_path or DEFAULT_AUDIT_LOG
+    audit_failures = []
+    for rec in records:
+        audit_record = build_audit_record(
+            action_id=rec.commit_id, gate_state=rec.route,
+            reason_code=rec.reason_code,
+            cq_scores={"relevance": rec.R, "coverage": rec.C,
+                       "ordering": rec.O, "robustness": rec.Ro},
+            schema_version=SCHEMA_VERSION,
+            thresholds={"tau_pass": config.tau_pass, "tau_repair": config.tau_repair},
+            case=case,
+        )
+        write_result = append_gate_decision(audit_record, audit_path)
+        if not write_result.ok:
+            audit_failures.append((rec.commit_id, write_result.error))
 
     # ---------- 汇总 ----------
     n_pass = sum(1 for r in records if r.route == "PASS")
@@ -313,6 +337,13 @@ def run_case(case: str, verbose: bool = False):
     print(f"  Total_Cost_certain（已确定成本量级，仅 PASS 的 value_tier 换算求和，代表性单位非真实金额）: {total_certain_cost:.0f}")
     print(f"  Total_Risk_ext（外部或有闸门期望敞口，Commit=True 之后仍未清零，代表性单位）: {total_risk_ext:.1f}")
     print(f"  Gate Record 已写入: {out_path}")
+    if audit_failures:
+        print(f"  [审计] {len(audit_failures)}/{len(records)} 条判定的审计写入失败"
+              "（判定本身仍然有效，未回滚）：")
+        for commit_id, error in audit_failures:
+            print(f"    - {commit_id}: {error}")
+    else:
+        print(f"  [审计] {len(records)}/{len(records)} 条判定已写入 {audit_path}（append-only）")
     print("=" * 78)
 
     return records
