@@ -170,6 +170,19 @@ passport）——都是"在推理和真正执行之间插一道独立判定"的�
 跟着具体业务重写——不是换个业务就能直接用的黑箱，是"怎么把领域知识变成
 可判定规则"的方法论 + 一个不用重写的判定引擎。
 
+### 与 DeepSeek Harness 等的关系
+
+**没有已验证的对接，接口已预留，待协议公开即可适配。** DeepSeek Harness（以及其他还没有公开
+接入协议的 harness/agent 平台）目前没有公开、稳定的第三方 guardrail 接入规范可供对接测试——这里
+不宣称"已兼容"或"已对接"任何这类平台，那会是在承诺一个没做过的事。
+
+真正做了、可验证的是：GateFix 对外暴露的两个面（MCP tool，见「三种代码级接入方式」；和任务 1 定义的
+机器可判定契约 `{gate_state, schema_version, cq_scores, reason_code, auto_repair_available,
+human_readable}`，见 `gate.py::build_gate_contract`）都是协议无关的通用形状——不依赖任何单一 harness
+的私有约定，`schema_version` 字段本身就是为了在下游协议演进时不破坏兼容性而设计的。一旦某个 harness
+公开了标准的 pre-action guardrail 接入协议，适配层是"照着协议包一层"的工作量，不需要改判定核心
+（`gate.py`/`engine.py`）——但这仍然是"设计上预留了空间"，不是"已经跑通"，这里不混淆两者。
+
 ### 不是 benchmark，也不是 LLM judge——那它是什么
 
 一句话：**AI agent 的执行前风控层**——管的是"这一步现在能不能发生"，不是
