@@ -17,12 +17,16 @@ preconditions/<case>.py），engine.py 和 gate.py 本身不含任何场景特�
 import argparse
 import json
 import importlib
+import sys
 from pathlib import Path
 from datetime import datetime, timezone
 
 import yaml
 
-from gate import GateConfig, GateRecord
+from gate import (
+    GateConfig, GateRecord, ReasonCode, classify_regular_reason_code,
+    EXIT_CODE, EXIT_CODE_INTERNAL_ERROR,
+)
 
 BASE_DIR = Path(__file__).parent
 
@@ -43,8 +47,10 @@ def _resolve_regular_commit(config, score_fn, repair_fn, evidence, verbose=False
     没有 commit 撞上这条路径，直到用真实但非案例内的 evidence 测 MCP
     server 的 authorize() 才发现。
 
-    返回 (route, result, Q, dry_rounds, repair_attempts)，route 只会是
-    PASS 或 ESCALATE。"""
+    返回 (route, result, Q, dry_rounds, repair_attempts, reason_code)，route
+    只会是 PASS 或 ESCALATE。reason_code 用 gate.py::classify_regular_reason_code
+    从收敛后的最终状态反推（任务 1：机器可判定的授权契约）。"""
+    repair_fn_registered = repair_fn is not None
     dry_rounds = 0
     repair_attempts = 0
     while True:
@@ -83,7 +89,13 @@ def _resolve_regular_commit(config, score_fn, repair_fn, evidence, verbose=False
                   "AUTO_REPAIR 无法自动执行 → 降级 ESCALATE")
         break
 
-    return route, result, Q, dry_rounds, repair_attempts
+    reason_code = classify_regular_reason_code(
+        route=route, Q=Q, tau_repair=config.tau_repair,
+        verifiable_ext=result["verifiable_ext"], dry_rounds=dry_rounds,
+        k_dry=config.k_dry, repair_attempts=repair_attempts,
+        repair_fn_registered=repair_fn_registered,
+    )
+    return route, result, Q, dry_rounds, repair_attempts, reason_code
 
 
 def load_yaml(path: Path) -> dict:
@@ -180,6 +192,7 @@ def run_case(case: str, verbose: bool = False):
                 route="BYPASS_TO_HUMAN", is_commit=is_commit, loop_mode=loop_mode,
                 verifiable_ext=False, dry_rounds=0,
                 notes=notes, bypassed_to_human=True,
+                reason_code=ReasonCode.BYPASS_HUMAN_JUDGMENT_REQUIRED,
             )
             records.append(rec)
             continue
@@ -202,6 +215,8 @@ def run_case(case: str, verbose: bool = False):
                 route=route, is_commit=is_commit, loop_mode=loop_mode,
                 verifiable_ext=result["verifiable_ext"], dry_rounds=0,
                 notes=result["notes"],
+                reason_code=(ReasonCode.SOFT_COMMIT_PROMISE_SUPPORTED if allowed
+                             else ReasonCode.SOFT_COMMIT_PROMISE_UNSUPPORTED),
             )
             records.append(rec)
             if route == "PASS":
@@ -212,7 +227,7 @@ def run_case(case: str, verbose: bool = False):
         score_fn = REGISTRY[commit["precondition_fn"]]
         repair_fn = REPAIR_REGISTRY.get(commit["precondition_fn"])
 
-        route, result, Q, dry_rounds, repair_attempts = _resolve_regular_commit(
+        route, result, Q, dry_rounds, repair_attempts, reason_code = _resolve_regular_commit(
             config, score_fn, repair_fn, evidence, verbose=verbose,
         )
 
@@ -222,6 +237,7 @@ def run_case(case: str, verbose: bool = False):
             route=route, is_commit=is_commit, loop_mode=loop_mode,
             verifiable_ext=result["verifiable_ext"], dry_rounds=dry_rounds,
             notes=result["notes"] + (f"　[经过 {repair_attempts} 轮 AUTO_REPAIR]" if repair_attempts else ""),
+            reason_code=reason_code,
         )
         rec.repair_attempts = repair_attempts
 
@@ -269,6 +285,21 @@ def run_case(case: str, verbose: bool = False):
     print(f"  Gate Record 已写入: {out_path}")
     print("=" * 78)
 
+    return records
+
+
+def worst_case_exit_code(records) -> int:
+    """任务 1 的退出码约定（0=PASS, 1=ESCALATE, 2=BYPASS, 3=内部错误）应用到
+    engine.py 的批量 CLI 形态：一次 run 处理多个 commit，没有单一 route 可
+    映射，所以取"这批里最需要人工介入的那个结果"——BYPASS_TO_HUMAN 比
+    ESCALATE 更需要人工，ESCALATE 比 PASS 更需要人工，谁的退出码数字大就
+    以谁为准。全 PASS 才是 0，调用方（CI/脚本）可以直接看退出码知道这次
+    run 有没有东西卡在人工那关，不用去 parse 打印文本或 gate_record.jsonl。"""
+    worst = 0
+    for r in records:
+        worst = max(worst, EXIT_CODE.get(r.route, EXIT_CODE_INTERNAL_ERROR))
+    return worst
+
 
 def main():
     parser = argparse.ArgumentParser(description="GateFix engine")
@@ -280,7 +311,12 @@ def main():
 
     args = parser.parse_args()
     if args.command == "run":
-        run_case(args.case, verbose=args.verbose)
+        try:
+            records = run_case(args.case, verbose=args.verbose)
+        except Exception as exc:  # noqa: BLE001 — fail-closed 兜底，见任务 2
+            print(f"internal error running case {args.case!r}: {exc}", file=sys.stderr)
+            sys.exit(EXIT_CODE_INTERNAL_ERROR)
+        sys.exit(worst_case_exit_code(records))
 
 
 if __name__ == "__main__":

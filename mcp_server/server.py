@@ -95,14 +95,19 @@ def list_precondition_functions(case: str = "sydney_move") -> list[dict]:
 
 @mcp.tool()
 def authorize(case: str, precondition_fn: str, evidence: dict) -> dict:
-    """对调用方提交的 evidence 做真实的 4D-CQ 判定。返回 route
-    （PASS / ESCALATE / BYPASS_TO_HUMAN，AUTO_REPAIR 已在内部收敛掉）、
-    authorized（route == "PASS" 的布尔值，方便调用方直接判断能不能继续）、
-    R/C/O/Ro/Q、verifiable_ext、repair_attempts、reason。
+    """对调用方提交的 evidence 做真实的 4D-CQ 判定。
 
-    核心契约：route != "PASS" 时，调用这个 tool 的 agent 绝不能把对应的
-    动作当作已授权去执行——这和 agent/gated_loop.py 里 GatedAgentLoop 的
-    契约完全一样，只是这次判定发生在 MCP 协议边界的另一侧。"""
+    返回值是任务 1 定义的机器可判定契约（gate_state/schema_version/
+    cq_scores/reason_code/auto_repair_available/human_readable），外加为了
+    不破坏既有调用方而保留的旧字段：route（=gate_state）、
+    authorized（route=="PASS" 的布尔值）、R/C/O/Ro/Q、verifiable_ext、
+    repair_attempts。
+
+    核心契约：route/gate_state != "PASS" 时，调用这个 tool 的 agent 绝不能
+    把对应的动作当作已授权去执行——这和 agent/gated_loop.py 里
+    GatedAgentLoop 的契约完全一样，只是这次判定发生在 MCP 协议边界的
+    另一侧。机器决策应该读 gate_state/reason_code，不要 parse human_readable。
+    """
     module = importlib.import_module(f"preconditions.{case}")
     index = _case_precondition_index(case)
     if precondition_fn not in module.REGISTRY:
@@ -128,7 +133,9 @@ def authorize(case: str, precondition_fn: str, evidence: dict) -> dict:
         repair_fn=repair_fn,
         soft_commit=meta.get("soft_commit", False),
     )
+    contract = result.to_contract()
     return {
+        **contract,
         "route": result.route,
         "authorized": result.route == "PASS",
         "R": result.R, "C": result.C, "O": result.O, "Ro": result.Ro, "Q": result.Q,

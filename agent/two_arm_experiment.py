@@ -29,6 +29,7 @@ from agent.gated_loop import (  # noqa: E402
     ReasonFn,
     make_case_gate_fn,
 )
+from gate import ReasonCode  # noqa: E402
 from world.sydney_move_world import OrderingViolation, SandboxWorld  # noqa: E402
 
 
@@ -55,6 +56,7 @@ def check_sequence_precondition(world: SandboxWorld, commit: dict) -> Optional[G
         route="ORDERING", R=0, C=0, O=0, Ro=0, Q=0,
         verifiable_ext=False,
         reason=f"requires {', '.join(missing)} (not executed yet)",
+        reason_code=ReasonCode.ORDERING_PRECONDITION_UNMET,
     )
 
 

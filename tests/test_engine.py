@@ -168,12 +168,13 @@ def _fake_score_fn_in_auto_repair_band(evidence):
 
 def test_resolve_regular_commit_without_repair_fn_escalates_not_auto_repair():
     config = GateConfig()
-    route, result, Q, dry_rounds, repair_attempts = engine._resolve_regular_commit(
+    route, result, Q, dry_rounds, repair_attempts, reason_code = engine._resolve_regular_commit(
         config, _fake_score_fn_in_auto_repair_band, repair_fn=None, evidence={},
     )
     assert route == "ESCALATE"
     assert route != "AUTO_REPAIR"
     assert repair_attempts == 0
+    assert reason_code == "AUTO_REPAIR_UNAVAILABLE_NO_REPAIR_FN"
 
 
 def test_resolve_regular_commit_with_repair_fn_still_auto_repairs_normally():
@@ -191,9 +192,10 @@ def test_resolve_regular_commit_with_repair_fn_still_auto_repairs_normally():
         calls.append(evidence)
         return {"repaired": True}
 
-    route, result, Q, dry_rounds, repair_attempts = engine._resolve_regular_commit(
+    route, result, Q, dry_rounds, repair_attempts, reason_code = engine._resolve_regular_commit(
         config, score_fn, repair_fn, evidence={},
     )
     assert route == "PASS"
     assert repair_attempts == 1
     assert len(calls) == 1
+    assert reason_code == "PASS_ABOVE_THRESHOLD"

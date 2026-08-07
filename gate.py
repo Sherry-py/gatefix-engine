@@ -11,6 +11,82 @@ gate.py —— GateFix 的判定核心（对应"系统设计公式与可调参�
 from dataclasses import dataclass, field
 from typing import Optional
 
+# ---------- 机器可判定的授权契约 (REVISION_BRIEF.md 任务 1) ----------
+#
+# schema_version 独立于代码版本演进——下游 agent/MCP client/CI 靠这个字段
+# 判断契约形状是否变化，不是靠 parse 人类可读文本。改了 REASON_CODE_* 的
+# 集合或 to_contract() 的字段结构才需要碰这个数字。
+SCHEMA_VERSION = "1"
+
+# CLI 退出码约定（对应任务 1 的验收标准）。AUTO_REPAIR 不出现在这里——
+# 它在 gate.py 上游（resolve_precondition / _resolve_regular_commit）已经
+# 收敛成 PASS 或 ESCALATE，从不作为终态暴露给调用方。
+EXIT_CODE = {
+    "PASS": 0,
+    "ESCALATE": 1,
+    "BYPASS_TO_HUMAN": 2,
+}
+EXIT_CODE_INTERNAL_ERROR = 3
+
+
+class ReasonCode:
+    """稳定的 reason_code 词汇表——机器决策依赖这些字符串，不依赖解析
+    human_readable 里的自然语言。这里只列真正由判定逻辑本身产出的原因：
+    gate.route() 只对聚合后的 Q 做阈值判断，不单独判断某一维度，所以故意
+    没有 COVERAGE_BELOW_THRESHOLD 这种按维度归因的码——那会假装系统做了
+    它实际没做的事（按维度定位失败原因）。"""
+
+    PASS_ABOVE_THRESHOLD = "PASS_ABOVE_THRESHOLD"
+    QUALITY_BELOW_REPAIR_THRESHOLD = "QUALITY_BELOW_REPAIR_THRESHOLD"
+    GAP_NOT_EXTERNALLY_VERIFIABLE = "GAP_NOT_EXTERNALLY_VERIFIABLE"
+    AUTO_REPAIR_DRY_ROUNDS_EXHAUSTED = "AUTO_REPAIR_DRY_ROUNDS_EXHAUSTED"
+    AUTO_REPAIR_UNAVAILABLE_NO_REPAIR_FN = "AUTO_REPAIR_UNAVAILABLE_NO_REPAIR_FN"
+    SOFT_COMMIT_PROMISE_UNSUPPORTED = "SOFT_COMMIT_PROMISE_UNSUPPORTED"
+    SOFT_COMMIT_PROMISE_SUPPORTED = "SOFT_COMMIT_PROMISE_SUPPORTED"
+    BYPASS_HUMAN_JUDGMENT_REQUIRED = "BYPASS_HUMAN_JUDGMENT_REQUIRED"
+    ORDERING_PRECONDITION_UNMET = "ORDERING_PRECONDITION_UNMET"
+    # 任务 2（fail-closed）用：evaluator 本身抛异常，不是证据不够格。
+    EVALUATOR_FAULT = "EVALUATOR_FAULT"
+
+
+def classify_regular_reason_code(*, route: str, Q: float, tau_repair: float,
+                                  verifiable_ext: bool, dry_rounds: int,
+                                  k_dry: int, repair_attempts: int,
+                                  repair_fn_registered: bool) -> str:
+    """常规 commit（非 bypass、非 soft_commit）分支的 reason_code 分类，用
+    收敛后的最终状态反推走的是哪条子路径。engine.py::_resolve_regular_commit
+    和 agent/gated_loop.py::resolve_precondition 复用同一份——
+    resolve_precondition 的 docstring 已经点名"两者必须走同一份判定逻辑，
+    不能各写一份、慢慢长歪"，reason_code 的分类同样适用这条约束。"""
+    if route == "PASS":
+        return ReasonCode.PASS_ABOVE_THRESHOLD
+    if Q >= tau_repair and not verifiable_ext:
+        return ReasonCode.GAP_NOT_EXTERNALLY_VERIFIABLE
+    if repair_attempts > 0 and dry_rounds >= k_dry:
+        return ReasonCode.AUTO_REPAIR_DRY_ROUNDS_EXHAUSTED
+    if Q >= tau_repair and not repair_fn_registered:
+        return ReasonCode.AUTO_REPAIR_UNAVAILABLE_NO_REPAIR_FN
+    return ReasonCode.QUALITY_BELOW_REPAIR_THRESHOLD
+
+
+def build_gate_contract(*, gate_state: str, R: float, C: float, O: float,
+                         Ro: float, reason_code: str,
+                         auto_repair_available: bool,
+                         human_readable: str) -> dict:
+    """任务 1 要求的结构化契约——见 REVISION_BRIEF.md 任务 1 的 JSON 示例。
+    下游只应该读 gate_state/reason_code/auto_repair_available 这些结构化
+    字段做决策，human_readable 仅供人看，绝不参与机器判断。"""
+    return {
+        "gate_state": gate_state,
+        "schema_version": SCHEMA_VERSION,
+        "cq_scores": {
+            "relevance": R, "coverage": C, "ordering": O, "robustness": Ro,
+        },
+        "reason_code": reason_code,
+        "auto_repair_available": auto_repair_available,
+        "human_readable": human_readable,
+    }
+
 
 @dataclass
 class GateConfig:
@@ -92,6 +168,7 @@ class GateRecord:
     notes: str = ""
     risk_ext: Optional[float] = None
     bypassed_to_human: bool = False
+    reason_code: str = ""
 
     def to_dict(self) -> dict:
         return {
@@ -110,4 +187,16 @@ class GateRecord:
             "notes": self.notes,
             "risk_ext": self.risk_ext,
             "bypassed_to_human": self.bypassed_to_human,
+            "schema_version": SCHEMA_VERSION,
+            "reason_code": self.reason_code,
         }
+
+    def to_contract(self) -> dict:
+        """机器可判定契约版本（REVISION_BRIEF.md 任务 1）——route 直接映射成
+        gate_state，human_readable 用 notes，机器决策不应该解析这个字段。"""
+        return build_gate_contract(
+            gate_state=self.route, R=self.R, C=self.C, O=self.O, Ro=self.Ro,
+            reason_code=self.reason_code,
+            auto_repair_available=getattr(self, "repair_attempts", 0) > 0,
+            human_readable=self.notes,
+        )

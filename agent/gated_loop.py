@@ -36,7 +36,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
 
-from gate import GateConfig  # noqa: E402
+from gate import (  # noqa: E402
+    GateConfig, ReasonCode, classify_regular_reason_code, build_gate_contract,
+    EXIT_CODE, EXIT_CODE_INTERNAL_ERROR,
+)
 from engine import load_yaml  # noqa: E402
 
 
@@ -57,10 +60,21 @@ class GateResult:
     dry_rounds: int = 0
     repair_attempts: int = 0
     reason: str = ""
+    reason_code: str = ""
 
     @property
     def blocked(self) -> bool:
         return self.route != "PASS"
+
+    def to_contract(self) -> dict:
+        """任务 1：机器可判定的授权契约。下游只应该读 gate_state/
+        reason_code/auto_repair_available 做决策，reason 只是给人看。"""
+        return build_gate_contract(
+            gate_state=self.route, R=self.R, C=self.C, O=self.O, Ro=self.Ro,
+            reason_code=self.reason_code,
+            auto_repair_available=self.repair_attempts > 0,
+            human_readable=self.reason,
+        )
 
 
 @dataclass
@@ -218,6 +232,7 @@ def make_case_gate_fn(case: str) -> GateFn:
                 route="BYPASS_TO_HUMAN", R=0, C=0, O=0, Ro=0, Q=0,
                 verifiable_ext=False,
                 reason=reason,
+                reason_code=ReasonCode.BYPASS_HUMAN_JUDGMENT_REQUIRED,
             )
 
         score_fn = registry[commit["precondition_fn"]]
@@ -264,8 +279,11 @@ def resolve_precondition(
             Q=config.quality_score(result["R"], result["C"], result["O"], result["Ro"]),
             verifiable_ext=result["verifiable_ext"],
             reason=result.get("notes", ""),
+            reason_code=(ReasonCode.SOFT_COMMIT_PROMISE_SUPPORTED if allowed
+                         else ReasonCode.SOFT_COMMIT_PROMISE_UNSUPPORTED),
         )
 
+    repair_fn_registered = repair_fn is not None
     ev = dict(evidence)
     dry_rounds = 0
     repair_attempts = 0
@@ -297,10 +315,17 @@ def resolve_precondition(
             route = "ESCALATE"
         break
 
+    reason_code = classify_regular_reason_code(
+        route=route, Q=Q, tau_repair=config.tau_repair,
+        verifiable_ext=result["verifiable_ext"], dry_rounds=dry_rounds,
+        k_dry=config.k_dry, repair_attempts=repair_attempts,
+        repair_fn_registered=repair_fn_registered,
+    )
     return GateResult(
         route=route, R=result["R"], C=result["C"], O=result["O"], Ro=result["Ro"], Q=Q,
         verifiable_ext=result["verifiable_ext"], dry_rounds=dry_rounds,
         repair_attempts=repair_attempts, reason=result.get("notes", ""),
+        reason_code=reason_code,
     )
 
 
@@ -371,6 +396,11 @@ def main():
     )
     trace = loop.run(context=args.case, initial_state={})
     _print_trace(args.case, trace)
+
+    # 任务 1 退出码约定：这个 CLI 一次只跑一条 loop，天然对应单一最终
+    # route——被 gate 挡下就是挡它的那个 route，跑完没被挡就是 PASS。
+    final_route = trace.steps[-1].route if trace.halted_by_gate else "PASS"
+    sys.exit(EXIT_CODE.get(final_route, EXIT_CODE_INTERNAL_ERROR))
 
 
 if __name__ == "__main__":
