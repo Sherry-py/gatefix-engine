@@ -210,6 +210,23 @@ controller）——资源变更真正生效前先过一道策略检查，符合�
   router/trajectory eval 是开发期调试 agent 决策质量的镜子，GateFix 是
   运行时拦截真实后果的闸门。
 
+## 安全边界
+
+**门控核心不需要、也不接收任何凭据。** `gate.py`/`engine.py`/`audit.py` 的判定和审计逻辑不读取、
+不存储、也不需要任何 API key、access token、密码——这条规则不是约定俗成，是可验证的：核心模块的
+`REGISTRY`/`resolve_precondition`/`GateConfig` 全部输入是案例领域数据（证件是否已处理、退款账户名
+是否匹配、箱子是否加固之类），没有任何参数接受凭据类型的值。`tests/test_mcp_interface_discipline.py::
+test_importing_gate_and_engine_does_not_pull_in_llm_or_heavy_sdks` 额外保证核心 import 时不会拉起
+任何需要凭据的外部 SDK。
+
+**敏感物脱敏是防意外泄露的第二道防线，不是第一道。** 第一道是上面这条设计约束本身——凭据压根不该
+出现在 evidence 里。万一某个 `precondition_fn` 的 notes 或调用方传入的 evidence 里意外带了凭据形状
+的字符串（`api_key=...`、`Bearer ...`、`sk-...` 这类模式），`gate.py::redact_secrets()` 会在两个出口
+统一脱敏：`GateResult`/`GateRecord.to_contract()` 的 `human_readable` 字段，以及 `gate_record.jsonl`
+（最近一次 run 快照）里的 `notes` 字段。审计日志（`gate_audit_log.jsonl`，见「门控决策持久化」）走的是
+更彻底的策略——`audit.build_audit_record()` 压根不收自由文本，只存 cq_scores/gate_state/reason_code
+这些结构化字段，没有"存了再脱敏"这一步能出错的环节。
+
 ## 机制图
 
 ![GateFix core engine — six-node skeleton with formula bindings](docs/architecture.svg)
@@ -238,6 +255,17 @@ controller）——资源变更真正生效前先过一道策略检查，符合�
 把 PASS / AUTO_REPAIR / ESCALATE / BYPASS_TO_HUMAN 排成一条自主度递减、人工介入递增的谱系——
 判定链（上一张图）回答"这个动作现在能不能放行"，这张图回答"放行结果对应多少自主权、多少人工
 介入"。领域无关引擎和领域相关配置的分层关系不在这张图里重复画了，见开头「项目结构」图。
+
+四态和"干预强度"是显式绑定的，不是四个平级的分类标签（`gate.py` 模块 docstring 里是权威定义）：
+
+- **PASS** = 自动放行（高频默认，agent 不停顿）
+- **AUTO_REPAIR** = 先给一次自愈机会（补证据后重新判定，类比 nudge，不是放行，也不是拒绝——
+  且从不作为对外可见的终态：`resolve_precondition()`/`_resolve_regular_commit()` 内部收敛成
+  PASS 或 ESCALATE 才返回）
+- **ESCALATE** = 需要人确认才能继续（阻断，但不是终局判断）
+- **BYPASS_TO_HUMAN** = 强制转人工——两类情况都直接跳过自动判定：人情类证据机器不可组装
+  （`friend_compensation`），或者 evaluator 本身故障、不是证据不够格（`reason_code=EVALUATOR_FAULT`，
+  fail-closed 兜底，见下方「安全边界」）
 
 ### 沙箱验证机制
 

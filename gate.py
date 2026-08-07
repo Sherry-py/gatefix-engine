@@ -6,10 +6,24 @@ gate.py —— GateFix 的判定核心（对应"系统设计公式与可调参�
 
 核心不变式（对应 Commit(a,E) = Human_Gate(a) ∧ ⋀ᵢ Pᵢ(E,θᵢ)）：
     一个动作能不能放行 = 人是否已批准 ∧ 证据在 R/C/O/Ro 四个维度上是否都过阈值。
+
+授权强度分级（REVISION_BRIEF.md 任务 5，借鉴 MyClaw 的 session / step-up /
+confirmation phrase 三级授权思路，落到这个仓库自己的四态词汇表）——四态
+和"干预强度"是显式绑定的，不是四个平级的分类标签：
+    PASS            = 自动放行（高频默认，agent 不停顿）
+    AUTO_REPAIR     = 先给一次自愈机会（补证据后重新判定，类比 nudge，
+                      不是放行，也不是拒绝）
+    ESCALATE        = 需要人确认才能继续（阻断，但不是终局判断）
+    BYPASS_TO_HUMAN = 强制转人工（人情类证据机器不可组装、或 evaluator
+                      本身故障——见 ReasonCode.EVALUATOR_FAULT——这两类都
+                      直接跳过自动判定，最不可逆/最没把握的动作走这里）
+四态从上到下自主度递减、人工介入递增；README「四态自主度谱系」一节是
+这条分级的可视化版本，这里是权威的文字定义。
 """
 
 from dataclasses import dataclass, field
 from typing import Optional
+import re
 
 # ---------- 机器可判定的授权契约 (REVISION_BRIEF.md 任务 1) ----------
 #
@@ -69,6 +83,31 @@ def classify_regular_reason_code(*, route: str, Q: float, tau_repair: float,
     return ReasonCode.QUALITY_BELOW_REPAIR_THRESHOLD
 
 
+# ---------- 敏感物纪律 (REVISION_BRIEF.md 任务 5) ----------
+#
+# 门控核心本身不需要、也不接收任何凭据——evidence 字段是案例领域数据
+# （证件是否已处理、退款账户名是否匹配之类），不是 API key/token。这里
+# 防的是第二道防线：某个 precondition_fn 的 notes 或调用方传入的 evidence
+# 里意外带了凭据形状的字符串，不能让它原样流进审计日志或对外的契约里。
+_SECRET_PATTERN = re.compile(
+    r"\b(api[_-]?key|access[_-]?key|token|secret|password|passwd|credentials?)"
+    r"s?\s*[:=]\s*\S+"
+    r"|\bsk-[A-Za-z0-9]{10,}\b"
+    r"|\bAKIA[0-9A-Z]{16}\b"
+    r"|\bbearer\s+[A-Za-z0-9\-_.]{10,}\b",
+    re.IGNORECASE,
+)
+
+
+def redact_secrets(text: str) -> str:
+    """把看起来像 API key/token/密码/凭据的片段替换成 [REDACTED]。启发式
+    匹配，不是万无一失的 DLP——真正的边界是"核心不接收凭据"这条设计约束
+    本身（见 README「安全边界」），这个函数是防意外泄露的第二道防线。"""
+    if not text:
+        return text
+    return _SECRET_PATTERN.sub("[REDACTED]", text)
+
+
 # ---------- fail-closed 语义 (REVISION_BRIEF.md 任务 2) ----------
 #
 # 区分两类失败：
@@ -109,7 +148,10 @@ def build_gate_contract(*, gate_state: str, R: float, C: float, O: float,
                          human_readable: str) -> dict:
     """任务 1 要求的结构化契约——见 REVISION_BRIEF.md 任务 1 的 JSON 示例。
     下游只应该读 gate_state/reason_code/auto_repair_available 这些结构化
-    字段做决策，human_readable 仅供人看，绝不参与机器判断。"""
+    字段做决策，human_readable 仅供人看，绝不参与机器判断。human_readable
+    在这里统一过一遍 redact_secrets()（任务 5）——这是唯一的出口，所有
+    GateRecord/GateResult 的 to_contract() 都走这里，不需要每个调用点各自
+    记得脱敏。"""
     return {
         "gate_state": gate_state,
         "schema_version": SCHEMA_VERSION,
@@ -118,7 +160,7 @@ def build_gate_contract(*, gate_state: str, R: float, C: float, O: float,
         },
         "reason_code": reason_code,
         "auto_repair_available": auto_repair_available,
-        "human_readable": human_readable,
+        "human_readable": redact_secrets(human_readable),
     }
 
 
@@ -218,7 +260,7 @@ class GateRecord:
             "loop_mode": self.loop_mode,
             "verifiable_ext": self.verifiable_ext,
             "dry_rounds": self.dry_rounds,
-            "notes": self.notes,
+            "notes": redact_secrets(self.notes),
             "risk_ext": self.risk_ext,
             "bypassed_to_human": self.bypassed_to_human,
             "schema_version": SCHEMA_VERSION,

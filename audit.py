@@ -39,7 +39,11 @@ def build_audit_record(*, action_id: str, gate_state: str, reason_code: str,
                         thresholds: Optional[dict] = None,
                         case: str = "") -> dict:
     """字段对应任务 4 的验收标准：时间戳、动作标识、输入的 cq_scores、
-    命中的阈值、输出的 gate_state、reason_code、schema_version。"""
+    命中的阈值、输出的 gate_state、reason_code、schema_version。故意不收
+    human_readable/notes 这类自由文本字段（任务 5 的敏感物纪律）——最强的
+    脱敏就是压根不存来路不明的自由文本，比"存了再脱敏"更彻底。需要人看的
+    说明走 GateResult/GateRecord.to_contract() 的 human_readable，那条路径
+    经过 gate.py::redact_secrets() 脱敏。"""
     return {
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "action_id": action_id,
