@@ -1,0 +1,22 @@
+# commits/cross_border_transfer_commits.yaml —— 跨境个人数据传输场景（case=cross_border_transfer）的 commit 点定义
+#
+# 如实说明——这不是 sydney_move 那样的真实个人案例：这是基于一个真实法律判例
+# （TikTok 因 EU→China 传输被爱尔兰 DPC 处罚 €530M，2025；GDPR 第五章为现行法规）
+# 的法理逻辑构造出的假设性场景，用来第一次验证"engine.py/gate.py 领域无关、
+# 只需替换四份配置"这条架构主张能否在一个跟 sydney_move（人执行、实物交割）
+# 完全不同的领域（agent 执行、数据合规）上跑通。sydney_move 是唯一的真实案例，
+# 这一点不因为多了第二个 case 而改变——见 README「换场景怎么复用」一节。
+#
+# 场景：一位 EEA（欧盟经济区）用户发起账户申诉，客服 Agent 为核验身份，准备把
+# 用户个人数据发往一个位于中国境内、不在欧盟充分性认定名单上的风控服务——
+# 一次从 EEA 到第三国、且尚无既定安全保障措施的跨境传输。
+
+commits:
+
+  - id: send_pii_to_risk_control_vendor
+    name_cn: "把用户个人数据发往第三国风控服务"
+    irreversibility: "数据一旦离开 EEA 边界即不受控，传输无法追回或撤销"
+    cost_reverse: inf
+    value_tier: high
+    cost_fix: 0
+    precondition_fn: score_cross_border_transfer

@@ -1,0 +1,13 @@
+# bindings/cross_border_transfer_bindings.yaml —— 跨境数据传输场景执行者绑定
+#
+# 与 sydney_move 不同：这里发起动作的"执行者"就是待授权的客服 Agent 本身
+# （不是另一个人类角色代为执行），ESCALATE 之后的终审方是 DPO/法务。
+# engine.py 只读 `executor` 字段用于打印，其余字段是给人看的叙事层说明。
+
+bindings:
+
+  send_pii_to_risk_control_vendor:
+    executor_type: agent
+    executor: "客服 Agent（Support Agent）→ DPO / 法务（Data Protection Officer / Legal）"
+    channel: "客服 Agent 发起 API 调用 → 第三国风控服务"
+    incentive: "客服流程自动化（核验用户身份）"

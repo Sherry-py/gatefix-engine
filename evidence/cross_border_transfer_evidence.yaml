@@ -1,0 +1,20 @@
+# evidence/cross_border_transfer_evidence.yaml —— 跨境数据传输场景的证据快照
+#
+# 如实说明——这份证据不是像 sydney_move 那样从真实个人案例笔记转录来的。
+# 这是一个假设性场景：法理依据是真实的（TikTok 因 EU→China 传输被爱尔兰 DPC
+# 处罚 €530M，2025；GDPR 第五章跨境传输规则是现行法规），但"一位德国用户发起
+# 账户申诉、客服 Agent 准备把数据发往中国境内风控服务"这个具体情节是基于该
+# 判例法理构造出来验证判定逻辑的，不是任何公司真实发生过的事件、也不对应
+# 任何真实用户或真实厂商。sydney_move 至今仍是这个仓库唯一的真实案例。
+#
+# 这份证据描述的是"客服 Agent 准备发起传输时"的状态：目的地不在欧盟充分性
+# 认定名单上，且尚未完成任何 Chapter V 允许的替代性安全保障措施（SCC/TIA/
+# 用户明确同意）——对应网站上"跨境数据"场景卡片里"无治理→违规不可撤回；
+# 有 GateFix→证据不足→ESCALATE 升级法务"这条叙事。
+
+send_pii_to_risk_control_vendor:
+  destination_adequacy_decision: false   # 中国大陆不在欧盟委员会现行充分性认定名单上
+  scc_signed: false                       # 标准合同条款（Standard Contractual Clauses）尚未签署
+  tia_completed: false                    # Transfer Impact Assessment 尚未完成
+  explicit_consent_obtained: false        # 未取得用户对本次跨境传输的明确同意
+  consent_obtained_before_request: false  # 同上：同意本就不存在，遑论先后顺序

@@ -1,5 +1,7 @@
 """Admission-gate self-check for the precondition scoring functions
-(preconditions/sydney_move.py) — inspired by Tencent WorkBuddy Bench's
+(preconditions/sydney_move.py, and — since it's the first case validated against
+this bar outside sydney_move — preconditions/cross_border_transfer.py) —
+inspired by Tencent WorkBuddy Bench's
 task-admission gate (arXiv:2607.20911v1): before trusting a benchmark task,
 they require baseline_reward <= 0.3 (an untouched workspace must NOT already
 satisfy the task) and oracle_reward == 1.0 (the gold patch must fully satisfy
@@ -43,6 +45,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from gate import GateConfig
 from preconditions import sydney_move as p
+from preconditions import cross_border_transfer as p_cbt
 
 cfg = GateConfig()
 
@@ -188,6 +191,39 @@ def test_expectation_setting_supported_promise_is_allowed():
     result = p.score_expectation_setting(oracle)
     allowed = cfg.expectation_gate(result["contains_promise"], result["has_feasibility_evidence"])
     assert allowed is True
+
+
+# ---------- cross_border_transfer (case=cross_border_transfer, the hypothetical
+# scenario — see that module's docstring and README "Case notes" for why this
+# is not real-case-verified evidence the way the sydney_move functions above are) ----------
+
+def test_cross_border_transfer_real_evidence_escalates():
+    """The evidence in evidence/cross_border_transfer_evidence.yaml, verbatim:
+    no adequacy decision, no SCC, no TIA, no consent. Like bond_claim, this must
+    not just avoid PASS — it must specifically ESCALATE, because verifiable_ext
+    is False (destination adequacy / legal-basis sufficiency is a DPO/legal call,
+    not something an automated re-query can close)."""
+    baseline = {
+        "destination_adequacy_decision": False,
+        "scc_signed": False, "tia_completed": False,
+        "explicit_consent_obtained": False,
+        "consent_obtained_before_request": False,
+    }
+    result = p_cbt.score_cross_border_transfer(baseline)
+    q = cfg.quality_score(result["R"], result["C"], result["O"], result["Ro"])
+    assert cfg.route(q, result["verifiable_ext"], dry_rounds=0) == "ESCALATE"
+
+
+def test_cross_border_transfer_oracle_is_pass():
+    oracle = {
+        "destination_adequacy_decision": True,
+        "scc_signed": True, "tia_completed": True,
+        "explicit_consent_obtained": True,
+        "consent_obtained_before_request": True,
+    }
+    result = p_cbt.score_cross_border_transfer(oracle)
+    q = cfg.quality_score(result["R"], result["C"], result["O"], result["Ro"])
+    assert cfg.route(q, result["verifiable_ext"], dry_rounds=0) == "PASS"
 
 
 # ---------- out of scope, by design ----------
