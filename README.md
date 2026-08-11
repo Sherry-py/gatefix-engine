@@ -18,7 +18,9 @@ $ python engine.py run --case=sydney_move
 
 同一套证据打分规则，7 个真实决策点里有 5 个直接放行、1 个自动补证后放行、1 个因为「钱最终打给谁」这个细节对不上而升级人工——不是模型判断力不够，是这道分界线在起作用。
 
-**TL;DR (English):** This project distills a judgment rule from a real,
+**TL;DR (English):** GateFix is a deterministic authorization layer for
+agent execution — the layer between "the model decided" and "the action
+happened." This project distills that judgment rule from a real,
 high-stakes business process — not from a need to govern AI agents. The
 rule answers: when a human and a machine collaborate on an irreversible
 process, who should be allowed to proceed, and when? It shouldn't be
@@ -87,7 +89,7 @@ pytest -v
 预期完全一致。改了某个 case 的 `commits/*.yaml` / `preconditions/*.py` 之后这些
 测试能立刻告诉你有没有破坏判定结果。现在有两个 case 各自的回归测试：
 `tests/test_engine.py`（sydney_move，7 个 commit，真实案例）、
-`tests/test_cross_border_transfer_case.py`（cross_border_transfer，1 个 commit，
+`tests/test_cross_border_transfer_case.py`（cross_border_transfer，2 个 commit，
 假设场景，见下方"换场景怎么复用"）。注意这两层测试覆盖的是不同的东西：单元测试
 验证的是引擎数学本身（对任何场景都该成立），回归测试验证的是"某一个具体场景的
 判定结果没被意外改坏"，不是"引擎在场景间复用"这件事本身——后者由下面这两个 case
@@ -154,6 +156,21 @@ pytest -v
   具体数字用代表性量级，不展示真实估损金额）——
   这是本框架这次新增的理论点：**Commit(a,E)=True 不代表总成本已确定**，
   海关抽查这类第三方裁量风险不会因为 gate 放行就清零。
+
+## 边界从哪来：上游溯因，下游确定
+
+`commits/<case>_commits.yaml` 里哪些动作算 commit 点、`preconditions/<case>.py`
+里每个点要求多高的证据质量——这些不是引擎算出来的，是人根据对业务的具身认知定下
+来的（哪一步不可逆、哪一步涉及第三方、什么条件下才算够格）。这一步是溯因式的、
+依赖领域判断，本案例里体现为案例笔记里的六步方法论（jurisdiction grounding →
+inherited-liability assessment → commit backward-chaining → …，见文末 Case
+notes）——不唯一，换个人可能划出不完全一样的边界，引擎也不会替你自动生成这条边界。
+
+但边界一旦定下来，`gate.py` / `engine.py` 这一层就是完全确定性的：同一份证据、
+同一套阈值，每次跑出来的 R/C/O/Ro/Q/route 都一样，可审计、可复现（`test_engine.py`
+里的端到端回归测试断言的正是这种确定性）。上游靠人的判断划边界，下游靠代码守边界
+——这也是"引擎领域无关、配置领域相关"这条设计原则真正的落点：换场景要重新做的是
+上游那次判断，不是下游这台机器。
 
 ## 这不是什么
 
@@ -247,6 +264,17 @@ test_importing_gate_and_engine_does_not_pull_in_llm_or_heavy_sdks` 额外保证�
 （最近一次 run 快照）里的 `notes` 字段。审计日志（`gate_audit_log.jsonl`，见「门控决策持久化」）走的是
 更彻底的策略——`audit.build_audit_record()` 压根不收自由文本，只存 cq_scores/gate_state/reason_code
 这些结构化字段，没有"存了再脱敏"这一步能出错的环节。
+
+**GateFix 判定证据的质量，不判定证据的真伪。** `authorize(case, precondition_fn, evidence)`
+算的是调用方传入的 `evidence` 这个 dict 在 R/C/O/Ro 四个维度上够不够格——如果调用方（或者
+一个偷懒/被攻破的 MCP client）传 `scc_signed: true` 但实际根本没签，门照样按"已签署"计算，
+照样可能放行。这不是疏漏，是这一层的职责边界：证据的真实性由**取证层**负责（人工核实、
+可信数据源、attestation），GateFix 是**判定层**，只保证"给定一组声称的证据，判定逻辑确定性、
+可复现、可审计"——两者职责分离，判定层不应该、也没有能力替取证层背书。这条边界现在是
+诚实的现状说明，不是长期规划：v1（现状）判定层单独存在，调用方对证据真实性负责；v2 如果要
+把这道边界往前推，需要接一个可信证据源（比如让 evidence 字段带上取证时间戳/来源系统签名，
+`authorize()` 校验来源而不是只读值）——这属于取证层要不要建、怎么建的问题，不是这套判定引擎
+本身需要改的东西。
 
 ## 机制图
 
@@ -458,16 +486,17 @@ python agent/langgraph_loop.py --case=sydney_move
 │                                              # authorize 两个 tool，判定活证据，不是案例回放
 ├── commits/
 │   ├── sydney_move_commits.yaml               # 7 个 commit 点定义（可逆性/涉及金额/打分函数名/风险配置）
-│   └── cross_border_transfer_commits.yaml     # 1 个 commit 点定义（假设场景，见下方 Case notes）
+│   └── cross_border_transfer_commits.yaml     # 2 个 commit 点定义（假设场景，见下方 Case notes）
 ├── bindings/
 │   ├── sydney_move_bindings.yaml               # 每个 commit 绑定的真实执行人（以身份角色标注，姓名已脱敏）
 │   └── cross_border_transfer_bindings.yaml    # 客服 Agent → DPO/法务 的执行/终审绑定
 ├── preconditions/
 │   ├── sydney_move.py                         # 7 个打分函数——本案例特有的 Pᵢ(E,θᵢ) 具体实现
-│   └── cross_border_transfer.py               # 1 个打分函数——跨境传输场景的 Pᵢ(E,θᵢ) 具体实现
+│   └── cross_border_transfer.py               # 2 个打分函数：一个法律判断缺口（只会 ESCALATE）、
+│                                              # 一个事实缺口（可 AUTO_REPAIR）——跨境传输场景的 Pᵢ(E,θᵢ)
 ├── evidence/
 │   ├── sydney_move_evidence.yaml              # 真实案例证据（7 条，含案例后期新增的纸箱/关税事件）
-│   └── cross_border_transfer_evidence.yaml    # 假设场景证据（1 条，法理真实、情节为构造，文件头已标注）
+│   └── cross_border_transfer_evidence.yaml    # 假设场景证据（2 条，法理真实、情节为构造，文件头已标注）
 ├── tests/
 │   ├── test_engine.py                         # gate.py 公式单元测试 + sydney_move 端到端回归测试
 │   ├── test_cross_border_transfer_case.py     # cross_border_transfer 端到端回归测试
@@ -489,12 +518,21 @@ case 名动态加载这四处，不需要改 `engine.py` 里的任何一行。
 
 `cross_border_transfer` 就是照这套流程加的第二个场景，跟 `sydney_move` 除了共用
 `gate.py`/`engine.py` 之外没有任何代码耦合，也是完全不同的领域——`sydney_move`
-是人执行的实物交割流程，`cross_border_transfer` 是 agent 发起的数据合规决策
-（欧盟用户个人数据传往第三国风控服务，目的地非充分性认定国家、且缺 SCC/TIA/
-用户同意 → `Q=0.438 < tau_repair` → 直接 `ESCALATE` 给 DPO/法务终审，不走
-AUTO_REPAIR——这个具体案例的判定依据是法律判断，不是可自动核查补齐的事实缺口，
-`preconditions/cross_border_transfer.py` 里 `verifiable_ext=False` 就是这个意思）。
-运行方式：
+是人执行的实物交割流程，`cross_border_transfer` 是 agent 发起的数据合规决策，
+两个 commit 分别对应两种不同性质的证据缺口：
+
+- `send_pii_to_risk_control_vendor`：欧盟用户个人数据传往第三国风控服务，目的地
+  非充分性认定国家、且缺 SCC/TIA/用户同意、政府调取风险也未评估 →
+  `Q=0.237 < tau_repair` → 直接 `ESCALATE` 给 DPO/法务终审，不走 AUTO_REPAIR——
+  这个具体案例的判定依据是法律判断，不是可自动核查补齐的事实缺口，
+  `preconditions/cross_border_transfer.py` 里 `verifiable_ext=False` 就是这个意思。
+- `send_pii_to_ticket_archival_vendor`：同一类传输，但 SCC 已签、TIA 评估本身
+  已完成，唯一的缺口是 TIA 文档还没同步进这套 evidence pipeline——一个可外部
+  核查补齐的事实缺口（`verifiable_ext=True`），`Q=0.800` 落进 `[tau_repair,
+  tau_pass)` 区间 → `AUTO_REPAIR` 先去查一遍文档系统，找到后 `Q=1.000` → `PASS`。
+
+两个 commit 放在同一个场景里跑，PASS / AUTO_REPAIR / ESCALATE 三态在这个旗舰
+场景本身就能演全，不用跨场景拼凑。运行方式：
 
 ```bash
 python engine.py run --case=cross_border_transfer

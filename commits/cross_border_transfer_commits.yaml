@@ -20,3 +20,11 @@ commits:
     value_tier: high
     cost_fix: 0
     precondition_fn: score_cross_border_transfer
+
+  - id: send_pii_to_ticket_archival_vendor
+    name_cn: "把用户个人数据发往（美国）工单存档服务"
+    irreversibility: "数据一旦离开 EEA 边界即不受控，传输无法追回或撤销"
+    cost_reverse: inf
+    value_tier: high
+    cost_fix: 0
+    precondition_fn: score_send_pii_to_archival_vendor

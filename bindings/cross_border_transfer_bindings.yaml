@@ -11,3 +11,9 @@ bindings:
     executor: "客服 Agent（Support Agent）→ DPO / 法务（Data Protection Officer / Legal）"
     channel: "客服 Agent 发起 API 调用 → 第三国风控服务"
     incentive: "客服流程自动化（核验用户身份）"
+
+  send_pii_to_ticket_archival_vendor:
+    executor_type: agent
+    executor: "客服 Agent（Support Agent）→ DPO / 法务（仅当 AUTO_REPAIR 后仍未达 tau_pass 时终审）"
+    channel: "客服 Agent 发起 API 调用 → 工单存档服务（美国）"
+    incentive: "工单存档与申诉留痕自动化"

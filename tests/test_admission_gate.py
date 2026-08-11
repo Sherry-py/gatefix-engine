@@ -220,6 +220,8 @@ def test_cross_border_transfer_oracle_is_pass():
         "scc_signed": True, "tia_completed": True,
         "explicit_consent_obtained": True,
         "consent_obtained_before_request": True,
+        "government_access_risk_assessed": True,
+        "residual_access_risk_level": "low",
     }
     result = p_cbt.score_cross_border_transfer(oracle)
     q = cfg.quality_score(result["R"], result["C"], result["O"], result["Ro"])

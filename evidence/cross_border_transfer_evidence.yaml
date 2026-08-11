@@ -18,3 +18,22 @@ send_pii_to_risk_control_vendor:
   tia_completed: false                    # Transfer Impact Assessment 尚未完成
   explicit_consent_obtained: false        # 未取得用户对本次跨境传输的明确同意
   consent_obtained_before_request: false  # 同上：同意本就不存在，遑论先后顺序
+  government_access_risk_assessed: false  # 连安全保障措施都没有，更谈不上评估过政府调取风险
+  residual_access_risk_level: null
+  supplementary_measures_applied: false
+
+# 第二个 commit：SCC/TIA 本身没问题，唯一的缺口是 TIA 文档还没同步进这套
+# evidence pipeline——一个可外部核查补齐的事实缺口，用来验证 AUTO_REPAIR
+# 分支（PASS/AUTO_REPAIR/ESCALATE 三态在同一个 case 里都要能真实跑出来，
+# 不只是 send_pii_to_risk_control_vendor 那种只会 ESCALATE 的单点）。同样
+# 是基于 Schrems II 判例法理构造的假设性场景，不对应任何真实厂商或事件。
+send_pii_to_ticket_archival_vendor:
+  destination_adequacy_decision: false   # 美国（无充分性认定，需替代性安全保障措施）
+  scc_signed: true                        # 标准合同条款已签署
+  tia_completed: true                     # Transfer Impact Assessment 本身已完成
+  tia_document_locatable_in_system: false # 但完成后的文档还没同步进这套 evidence pipeline
+  explicit_consent_obtained: true         # 已取得用户对本次传输的明确同意
+  consent_obtained_before_request: true   # 同意先于传输请求发生
+  government_access_risk_assessed: true   # TIA 里专门评估过美国 FISA 702 等政府调取权
+  residual_access_risk_level: low         # 评估结论：残余风险低
+  supplementary_measures_applied: true    # 且已落地补充措施（加密、密钥不在目的地司法辖区）
