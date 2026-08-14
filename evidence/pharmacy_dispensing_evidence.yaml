@@ -1,0 +1,19 @@
+# evidence/pharmacy_dispensing_evidence.yaml —— ADC override 场景的证据快照
+#
+# 如实说明——这份证据不是判决记录的逐字转录，是取自真实事故（见 commits.yaml
+# 文件头、README「Case notes」）里"override 绕过了本该拦住这次给药的检查"这个
+# 结构性事实，构造出的代表性证据字段。真实事故里的关键失效点：(1) 药品是按
+# 商品名 Versed 搜索、系统里只收录了通用名 midazolam，触发第一次搜索失败；
+# (2) override 打开了远超当前医嘱范围的药品库，第二次"VE"搜索命中了完全不同
+# 的高警示药品 vecuronium；(3) 医嘱在系统里当时还没有完成收录/核实，protocol
+# 要求的"给药前医嘱已核验"这一步在给药动作发生前并未满足；(4) vecuronium 这
+# 类神经肌肉阻滞剂本该要求"患者已插管/正在插管"的额外确认，未被强制要求；
+# (5) ISMP 事后建议 override 搜索至少输入 5 个字符，本案里只搜了 2 个字符
+# （"VE"）。
+
+dispense_high_alert_drug_via_override:
+  drug_name_matches_verified_order: false          # override 搜索命中的药品（vecuronium）与医嘱药品（Versed/midazolam）不一致
+  order_verified_in_system_before_override: false   # 医嘱在触发 override 时尚未在系统里完成收录/核验
+  high_alert_drug_confirmation_completed: false     # vecuronium 属高警示药品，未完成"患者已插管/正在插管"的强制确认
+  patient_identity_barcode_scanned: false           # 给药前未扫描患者腕带条码核对身份（真实事故记录中未提及已执行此步）
+  override_search_used_full_drug_name: false        # 搜索只输入了 "VE" 两个字符，未达到 ISMP 事后建议的 ≥5 字符

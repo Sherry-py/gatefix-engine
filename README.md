@@ -85,13 +85,15 @@ pytest -v
 测试覆盖两层：`gate.py` 六个公式的单元测试（阈值边界、k_dry 耗尽、expectation_gate
 真值表），以及端到端回归测试——跑一遍某个 case，断言每个 commit 的 route 结果跟
 预期完全一致。改了某个 case 的 `commits/*.yaml` / `preconditions/*.py` 之后这些
-测试能立刻告诉你有没有破坏判定结果。现在有两个 case 各自的回归测试：
+测试能立刻告诉你有没有破坏判定结果。现在有三个 case 各自的回归测试：
 `tests/test_engine.py`（sydney_move，7 个 commit，真实案例）、
 `tests/test_cross_border_transfer_case.py`（cross_border_transfer，1 个 commit，
-假设场景，见下方"换场景怎么复用"）。注意这两层测试覆盖的是不同的东西：单元测试
-验证的是引擎数学本身（对任何场景都该成立），回归测试验证的是"某一个具体场景的
-判定结果没被意外改坏"，不是"引擎在场景间复用"这件事本身——后者由下面这两个 case
-共用同一份 `gate.py`/`engine.py`、零场景特定代码改动来验证。
+假设场景）、`tests/test_pharmacy_dispensing_case.py`（pharmacy_dispensing，
+1 个 commit，判定依据取自真实已判决案件，见下方"换场景怎么复用"）。注意这两层
+测试覆盖的是不同的东西：单元测试验证的是引擎数学本身（对任何场景都该成立），
+回归测试验证的是"某一个具体场景的判定结果没被意外改坏"，不是"引擎在场景间复用"
+这件事本身——后者由下面这三个 case 共用同一份 `gate.py`/`engine.py`、零场景特定
+代码改动来验证。
 
 ## 项目结构
 
@@ -126,14 +128,16 @@ pytest -v
 `evidence/<case>_evidence.yaml` / `preconditions/<case>.py`）+ 一个不含场景特定逻辑的引擎
 （`gate.py` + `engine.py`，靠 `importlib` 按 case 名动态导入打分函数）——完整的调用关系见开头「项目结构」图。
 
-**如实说明现状**：现在有两个场景跑通过——`sydney_move`（真实案例，人执行、
-实物交割）和 `cross_border_transfer`（假设场景，agent 执行、数据合规，见下方
-"换场景怎么复用"）。上面这套"引擎/配置分离"不再只是架构设计：`engine.py`/
-`gate.py` 在两个领域完全不同的场景之间零改动复用，是这条设计原则第一次被
-第二个场景验证。**但这不代表"换个场景不用改引擎"已经是被充分验证的通用结论**——
-只多验证了一次，且 `cross_border_transfer` 是假设场景不是真实案例（见下方
-"Case notes"），样本量仍然很小；只是从"零场景验证"变成"一次场景间验证"，
-不要读成更多。
+**如实说明现状**：现在有三个场景跑通过——`sydney_move`（真实案例，人执行、
+实物交割）、`cross_border_transfer`（假设场景，agent 执行、数据合规）、
+`pharmacy_dispensing`（判定依据取自真实已判决案件，人操作自动化设备执行、
+不可逆物理给药，见下方"换场景怎么复用"）。上面这套"引擎/配置分离"不再只是
+架构设计：`engine.py`/`gate.py` 在三个领域完全不同的场景之间零改动复用，是
+这条设计原则第三次被验证。**但这不代表"换个场景不用改引擎"已经是被充分验证
+的通用结论**——只多验证了两次，`n=3`，且只有 `sydney_move` 是私人真实案例、
+`pharmacy_dispensing` 虽判定依据取自真实事故但具体证据字段是构造的、
+`cross_border_transfer` 是纯假设场景（见下方"Case notes"），样本量仍然很小；
+只是从"零场景验证"变成"两次场景间验证"，不要读成更多。
 
 跑一遍能看到框架里几个关键机制在真实数据上到底长什么样：
 
@@ -458,19 +462,24 @@ python agent/langgraph_loop.py --case=sydney_move
 │                                              # authorize 两个 tool，判定活证据，不是案例回放
 ├── commits/
 │   ├── sydney_move_commits.yaml               # 7 个 commit 点定义（可逆性/涉及金额/打分函数名/风险配置）
-│   └── cross_border_transfer_commits.yaml     # 1 个 commit 点定义（假设场景，见下方 Case notes）
+│   ├── cross_border_transfer_commits.yaml     # 1 个 commit 点定义（假设场景，见下方 Case notes）
+│   └── pharmacy_dispensing_commits.yaml       # 1 个 commit 点定义（判定依据取自真实已判决案件，见下方 Case notes）
 ├── bindings/
 │   ├── sydney_move_bindings.yaml               # 每个 commit 绑定的真实执行人（以身份角色标注，姓名已脱敏）
-│   └── cross_border_transfer_bindings.yaml    # 客服 Agent → DPO/法务 的执行/终审绑定
+│   ├── cross_border_transfer_bindings.yaml    # 客服 Agent → DPO/法务 的执行/终审绑定
+│   └── pharmacy_dispensing_bindings.yaml      # 床边护士 → 药师/第二核对护士 的执行/终审绑定
 ├── preconditions/
 │   ├── sydney_move.py                         # 7 个打分函数——本案例特有的 Pᵢ(E,θᵢ) 具体实现
-│   └── cross_border_transfer.py               # 1 个打分函数——跨境传输场景的 Pᵢ(E,θᵢ) 具体实现
+│   ├── cross_border_transfer.py               # 1 个打分函数——跨境传输场景的 Pᵢ(E,θᵢ) 具体实现
+│   └── pharmacy_dispensing.py                 # 1 个打分函数——ADC override 场景的 Pᵢ(E,θᵢ) 具体实现
 ├── evidence/
 │   ├── sydney_move_evidence.yaml              # 真实案例证据（7 条，含案例后期新增的纸箱/关税事件）
-│   └── cross_border_transfer_evidence.yaml    # 假设场景证据（1 条，法理真实、情节为构造，文件头已标注）
+│   ├── cross_border_transfer_evidence.yaml    # 假设场景证据（1 条，法理真实、情节为构造，文件头已标注）
+│   └── pharmacy_dispensing_evidence.yaml      # 代表性证据（1 条，事故真实、具体字段取值为构造，文件头已标注）
 ├── tests/
 │   ├── test_engine.py                         # gate.py 公式单元测试 + sydney_move 端到端回归测试
 │   ├── test_cross_border_transfer_case.py     # cross_border_transfer 端到端回归测试
+│   ├── test_pharmacy_dispensing_case.py       # pharmacy_dispensing 端到端回归测试
 │   ├── test_admission_gate.py                 # precondition 打分函数的准入自检（见上文"不是 benchmark，也不是 LLM judge"）
 │   ├── test_gated_loop.py                     # agent loop 控制流单测 + 真实 sydney_move 数据的端到端断言
 │   ├── test_mcp_server.py                     # MCP tool 的活证据判定测试（真实 AUTO_REPAIR/ESCALATE/soft_commit）
@@ -479,7 +488,7 @@ python agent/langgraph_loop.py --case=sydney_move
 └── gate_record.jsonl                          # 运行后生成的判定记录（可重复生成，已提交一份跑过的样例）
 ```
 
-## 换场景怎么复用（已用第二个场景验证一次，仍是小样本）
+## 换场景怎么复用（已用两个后续场景验证，仍是小样本）
 
 新增一个场景 `<new_case>` 需要四份新文件：`commits/<new_case>_commits.yaml`、
 `bindings/<new_case>_bindings.yaml`、`evidence/<new_case>_evidence.yaml`、
@@ -487,24 +496,35 @@ python agent/langgraph_loop.py --case=sydney_move
 然后 `python engine.py run --case=<new_case>`。`engine.py` 用 `importlib` 按
 case 名动态加载这四处，不需要改 `engine.py` 里的任何一行。
 
-`cross_border_transfer` 就是照这套流程加的第二个场景，跟 `sydney_move` 除了共用
+`cross_border_transfer` 是照这套流程加的第二个场景，跟 `sydney_move` 除了共用
 `gate.py`/`engine.py` 之外没有任何代码耦合，也是完全不同的领域——`sydney_move`
 是人执行的实物交割流程，`cross_border_transfer` 是 agent 发起的数据合规决策
 （欧盟用户个人数据传往第三国风控服务，目的地非充分性认定国家、且缺 SCC/TIA/
 用户同意 → `Q=0.438 < tau_repair` → 直接 `ESCALATE` 给 DPO/法务终审，不走
 AUTO_REPAIR——这个具体案例的判定依据是法律判断，不是可自动核查补齐的事实缺口，
 `preconditions/cross_border_transfer.py` 里 `verifiable_ext=False` 就是这个意思）。
+
+`pharmacy_dispensing` 是第三个场景，也是第一个物理世界执行、且真实造成不可逆
+伤害后果的场景——判定依据取自一起真实、已公开审理的医疗事故（2017 年范德堡
+大学医学中心 ADC override 用药错误案，详见下方 Case notes），领域是人操作
+自动化设备执行的不可逆给药动作，与前两个场景同样零代码耦合（护士通过自动配药
+柜 override 取到与医嘱不符的高警示药品，且高警示药品强制确认、患者身份核对
+两道独立安全层均缺失，医嘱核验也未先于 override 完成 → `Q=0.25 < tau_repair` →
+直接 `ESCALATE` 给药师/第二核对护士终审，同样不走 AUTO_REPAIR——药品身份是否
+匹配当前医嘱是需要临床现场核实的判断，不是可自动核查补齐的事实缺口）。
 运行方式：
 
 ```bash
 python engine.py run --case=cross_border_transfer
+python engine.py run --case=pharmacy_dispensing
 ```
 
 **如实说明这次验证的范围**：这证明了"引擎领域无关、配置领域相关"这条架构主张
-在两个具体场景之间成立，不是一个经过大样本统计验证的通用复用性结论——`n=2`，
-而且其中只有一个（`sydney_move`）是真实案例，`cross_border_transfer` 是假设场景
+在三个具体场景之间成立，不是一个经过大样本统计验证的通用复用性结论——`n=3`，
+而且其中只有一个（`sydney_move`）是私人真实案例，`pharmacy_dispensing` 判定
+依据取自真实事故但具体证据字段是构造的，`cross_border_transfer` 是纯假设场景
 （见下方 Case notes）。往后再加场景，这条主张会被进一步验证或推翻，现在只能说
-"目前两次都成立"。
+"目前三次都成立"。
 
 ## Case notes
 
@@ -535,3 +555,34 @@ above its first test outside `sydney_move`'s domain — it does not correspond
 to any real company's actual internal system, any real user, or any real
 vendor. `sydney_move` remains the only case in this repo backed by a real
 personal record.
+
+`pharmacy_dispensing` is a third kind of case, also labeled as such everywhere
+it appears (module/commits-file docstrings, evidence file header, this
+section): its judgment basis is taken directly from a real, publicly
+adjudicated incident, not a private record and not a constructed-but-plausible
+scenario. On 2017-12-26 at Vanderbilt University Medical Center, nurse
+RaDonda Vaught used an automated dispensing cabinet's (ADC) override function
+to retrieve the wrong drug for patient Charlene Murphey: the ordered sedative
+Versed (generic name midazolam) wasn't indexed under its brand name and the
+first cabinet search failed, so Vaught triggered an override that opened a
+much wider drug range, searched "VE" again, and this time the cabinet offered
+vecuronium (a paralytic) — she withdrew and administered it, and the patient
+died. On 2022-03-25 a jury convicted Vaught of criminally negligent homicide
+and gross neglect; a CMS investigation found systemic issues at the hospital
+(paralytics were subsequently shrink-wrapped and additional system warnings
+were added). Sources: [Wikipedia, "RaDonda Vaught homicide case"](https://en.wikipedia.org/wiki/RaDonda_Vaught_homicide_case),
+[KFF Health News](https://kffhealthnews.org/courts/radonda-vaught-fatal-drug-error-vanderbilt-hospital-responsibility/),
+[UNC Journal of Law & Technology](https://journals.law.unc.edu/ncjolt/blogs/the-radonda-vaught-case-implications-on-health-care-and-the-law/).
+The specific evidence field values in `evidence/pharmacy_dispensing_evidence.yaml`
+(drug-name match, high-alert-drug confirmation, patient-ID barcode scan, order-
+verified-before-override, search-string length) are a representative
+construction built from this incident's reported structural facts — not a
+verbatim transcription of trial records — to give the engine/config-separation
+claim its third test, and its first test in a domain where the commit is a
+physical, irreversible medication-administration action with a real harmful
+outcome, executed by a human operating automation equipment (`sydney_move` is
+human-executed physical handover with no automation in the loop;
+`cross_border_transfer` is agent-initiated, with no physical action at all).
+It does not correspond to any real hospital's current internal system,
+config, or live patient — only the reported facts of the 2017 incident and
+ISMP's subsequent published safety guidance are real.

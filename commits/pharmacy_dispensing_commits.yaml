@@ -1,0 +1,32 @@
+# commits/pharmacy_dispensing_commits.yaml —— 自动配药柜（ADC）override 场景（case=pharmacy_dispensing）的 commit 点定义
+#
+# 如实说明——这不是 sydney_move 那样的真实个人案例，也不是 cross_border_transfer
+# 那样"法理真实、情节构造"的假设场景：这个 case 的判定依据直接取自一起真实、
+# 已公开审理的医疗事故——2017-12-26 范德堡大学医学中心（Vanderbilt University
+# Medical Center）护士 RaDonda Vaught 在给患者 Charlene Murphey 用药时，通过
+# 自动配药柜（ADC）的 override 功能取错药：应给的镇静剂 Versed（通用名
+# midazolam）在系统里未按商品名收录，柜子搜不到，触发 override 后柜子在更大
+# 药品范围内又一次按"VE"搜索，这次给出了肌松剂 vecuronium——护士取走并注射，
+# 患者死亡。2022-03-25 陪审团裁定 Vaught 过失杀人罪（criminally negligent
+# homicide）与重大疏忽罪成立，CMS 调查认定医院存在系统性问题（事后医院对
+# 肌松剂加了收缩包装、系统里加了额外警示）。案件细节来自公开报道与判决记录
+# （Wikipedia "RaDonda Vaught homicide case"、KFF Health News、北卡法律科技
+# 期刊等，见 README「Case notes」）。
+#
+# 这个 case 不是把上述事实原样复现成"数据"——是取这起真实事故里"override 绕
+# 过了本该拦住这次给药的证据检查"这个结构性事实，构造出这一个 commit 点该有
+# 的证据字段。具体证据字段的取值是本 case 为了跑通判定逻辑构造的代表性证据，
+# 不是从判决记录逐字转录的原始数据。这是本仓库第一个物理世界执行、且真实
+# 造成不可逆伤害后果的场景——sydney_move 是人执行的实物交割，
+# cross_border_transfer 是 agent 发起的数据合规决策，这个 case 是人操作
+# 自动化设备执行的不可逆物理给药动作。
+
+commits:
+
+  - id: dispense_high_alert_drug_via_override
+    name_cn: "通过 ADC override 发放并给予高警示药品"
+    irreversibility: "药物一旦注射进入患者体内无法召回或撤销"
+    cost_reverse: inf
+    value_tier: high
+    cost_fix: 0
+    precondition_fn: score_pharmacy_dispensing_override

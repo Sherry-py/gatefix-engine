@@ -1,0 +1,13 @@
+# bindings/pharmacy_dispensing_bindings.yaml —— ADC override 场景执行者绑定
+#
+# 与 cross_border_transfer 类似：发起动作的"执行者"是护士本人（对着自动配药
+# 柜发起 override 操作），ESCALATE 之后的终审方是药房药师（第二人核对）。
+# engine.py 只读 executor 字段用于打印，其余字段是给人看的叙事层说明。
+
+bindings:
+
+  dispense_high_alert_drug_via_override:
+    executor_type: human_with_automation
+    executor: "床边护士（Bedside Nurse）→ 药房药师 / 第二核对护士（Pharmacist / Second-Check Nurse）"
+    channel: "护士在 ADC（自动配药柜）上发起 override 操作 → 取药并给药"
+    incentive: "患者需要尽快用药（镇静/急用），系统里的医嘱尚未完成收录/核验，护士选择 override 而不是等待"
