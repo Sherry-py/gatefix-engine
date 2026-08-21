@@ -1,6 +1,9 @@
 # GateFix：亲历真实案例逼出的 Agent Guardrails
 
 [![CI](https://github.com/Sherry-py/gatefix-engine/actions/workflows/ci.yml/badge.svg)](https://github.com/Sherry-py/gatefix-engine/actions/workflows/ci.yml)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](LICENSE)
+
+> **许可协议：** 本仓库采用 **AGPL-3.0 + 商业许可** 双许可模式。阅读、运行、fork 用于研究/评估完全自由，遵循 [AGPL-3.0](LICENSE)；如需在闭源产品中集成而不希望承担 AGPL 的开源回馈义务，请通过[商业许可](DUAL-LICENSE.md)获取豁免。详见 [DUAL-LICENSE.md](DUAL-LICENSE.md)。
 
 > **一句话锚点：** Model 负责「知道」，GateFix 负责「放不放行」——诊断出问题不代表会停下来，这道分界线才是。
 
@@ -241,16 +244,31 @@ passport）——都是"在推理和真正执行之间插一道独立判定"的�
 
 ### 与 DeepSeek Harness 等的关系
 
-**没有已验证的对接，接口已预留，待协议公开即可适配。** DeepSeek Harness（以及其他还没有公开
-接入协议的 harness/agent 平台）目前没有公开、稳定的第三方 guardrail 接入规范可供对接测试——这里
-不宣称"已兼容"或"已对接"任何这类平台，那会是在承诺一个没做过的事。
+**更新（2026-08-14）：DeepSeek Harness 已于 2026-08-13 开源（v0.1 developer preview，MIT，
+Cordis 插件架构），下面这段的前提已经不成立——现在有一个真实、可跑、有测试覆盖的对接，见
+`dsh_plugin/`。**
 
-真正做了、可验证的是：GateFix 对外暴露的两个面（MCP tool，见「三种代码级接入方式」；和任务 1 定义的
-机器可判定契约 `{gate_state, schema_version, cq_scores, reason_code, auto_repair_available,
-human_readable}`，见 `gate.py::build_gate_contract`）都是协议无关的通用形状——不依赖任何单一 harness
-的私有约定，`schema_version` 字段本身就是为了在下游协议演进时不破坏兼容性而设计的。一旦某个 harness
-公开了标准的 pre-action guardrail 接入协议，适配层是"照着协议包一层"的工作量，不需要改判定核心
-（`gate.py`/`engine.py`）——但这仍然是"设计上预留了空间"，不是"已经跑通"，这里不混淆两者。
+做了什么、可验证到什么程度，如实说明：`dsh_plugin/` 是一个 Cordis `tools/pre-execute` hook
+插件（对应 DeepSeek Harness 官方 cookbook 文档 `docs/cookbook/extension-cookbook.md` 里的
+"permission-gate" 范式），拦截真实的 `tools/pre-execute` waterfall，把 tool call 的参数当
+evidence 转发给这个仓库的 `mcp_server/authorize_stdin.py`（复用 `mcp_server/server.py` 里
+和 MCP client 调用的同一个 `authorize()` 函数，同一份 4D-CQ 判定、同一份审计写入），再把
+`PASS/ESCALATE/BYPASS_TO_HUMAN` 映射回 DeepSeek Harness 自己的 `PreToolDecision`
+（`allow`/`ask`/`ask`，`ask` 会真的路由到 `ctx.approval` 走人工审批，不是摆设）。12 个测试
+（`dsh_plugin/test/`）覆盖了纯映射逻辑、真实 subprocess 调用、以及在一个真实构造的 Cordis
+`Context` 上完整 dispatch `tools/pre-execute` 三条真实判定路径（PASS/ESCALATE/桥接失败时的
+fail-closed）——不是 mock 出来的假通过。
+
+同样如实说明边界：默认只映射了 `cross_border_transfer` 这一个 case 的两个 commit（唯一一个
+"agent 执行"而不是"人执行"的 case，天然有 tool-call 形状）；evidence 目前是 tool 参数原样
+透传给判定函数，字段名要对得上 `preconditions/<case>.py` 里打分函数期望的名字，还没做
+重命名/派生层；没有在一个真正跑起来的 `dsh` agent session 里端到端跑过（测试验证到"真实
+Cordis Context + 真实 subprocess + 真实判定结果"这一层，没有验证到"接一个真实模型、真实
+agent loop"这一层）。完整边界清单见 `dsh_plugin/README.md`「What this does not do yet」。
+
+GateFix 对外暴露的机器可判定契约本身（`{gate_state, schema_version, cq_scores, reason_code,
+auto_repair_available, human_readable}`，见 `gate.py::build_gate_contract`）依然是协议无关
+的通用形状，`dsh_plugin/` 只是给这个契约接了第一个真实的下游协议。
 
 ### 不是 benchmark，也不是 LLM judge——那它是什么
 

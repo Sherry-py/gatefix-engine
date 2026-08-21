@@ -18,12 +18,18 @@ def test_non_goals_section_exists():
     assert "## 这不是什么" in README
 
 
-def test_deepseek_harness_relationship_section_exists_with_hedged_language():
+def test_deepseek_harness_relationship_section_documents_real_integration_with_honest_boundaries():
+    """DeepSeek Harness 于 2026-08-13 开源后，dsh_plugin/ 是一个真实、有测试
+    覆盖的对接——这条测试不再要求"接口已预留/待协议公开"这类开源前的旧
+    hedge 语言（那句话现在反而是不实陈述），改为要求：section 里点名了真实
+    做出来的东西（dsh_plugin），同时仍然如实说明这个对接没做到的部分，
+    不能是一句干净的"已兼容"了事。"""
     assert "与 DeepSeek Harness 等的关系" in README
-    # 必须带"预留/待适配"这类限定语，不能是干净的"已兼容"陈述
     section_start = README.index("与 DeepSeek Harness 等的关系")
-    section = README[section_start:section_start + 1500]
-    assert "接口已预留" in section or "待协议公开" in section
+    section = README[section_start:section_start + 2000]
+    assert "dsh_plugin" in section
+    assert "如实说明" in section
+    assert any(hedge in section for hedge in ("没有在", "还没", "边界清单"))
 
 
 def test_no_unqualified_deepseek_harness_compatibility_claim():

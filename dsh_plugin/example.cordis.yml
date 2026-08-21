@@ -1,0 +1,21 @@
+# Worked example: wiring the GateFix gate into a DeepSeek Harness composition.
+# Add this entry alongside your existing tool/agent plugins (see
+# examples/jsonrpc-agent/cordis.yml in deepseek-harness for a full composition
+# this can be dropped into). Load order only matters relative to other
+# tools/pre-execute listeners — this entry has no other dependency.
+
+- id: gatefix-gate
+  name: 'gatefix-dsh-plugin'
+  config:
+    gatefixRoot: !!js process.env.GATEFIX_ROOT ?? '/absolute/path/to/gatefix-engine'
+    # pythonBin: 'python3'      # optional, defaults to 'python3' on PATH
+    # timeoutMs: 5000           # optional, fail-closed deny past this
+    mappings:
+      - toolName: send_pii_to_risk_control_vendor
+        case: cross_border_transfer
+        preconditionFn: score_cross_border_transfer
+      - toolName: send_pii_to_ticket_archival_vendor
+        case: cross_border_transfer
+        preconditionFn: score_send_pii_to_archival_vendor
+      # Add one entry per tool you want gated. A tool name with no entry
+      # here passes straight through — see dsh_plugin/README.md "Scope".
