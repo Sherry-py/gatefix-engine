@@ -1,0 +1,28 @@
+# evidence/unmanned_pharmacy_dispensing_evidence.yaml —— 无人药房发药场景的证据快照
+#
+# 如实说明——这份证据不是从任何真实公司系统日志转录来的。这是一个假设性场景：
+# 法规依据真实（药品管理法处方药审核规则、精神药品管理办法），"视觉 SKU 识别
+# 置信度高但缺条码复核""处方药已识别但药师审核未完成"这类具体数值/状态组合是
+# 构造出来的示范数据，用来让 PASS / AUTO_REPAIR / ESCALATE / BYPASS_TO_HUMAN
+# 四态在这一个场景里都能真实跑出来——不对应任何公司真实发生过的事件、真实顾客
+# 或真实门店的运行数据。
+
+# 第一个 commit：视觉识别置信度很高（0.97），但还没有做条码复核这道独立验证
+# 锚点——这是"可外部核查补齐的事实缺口"（去扫一下条码就能确认），用来验证
+# AUTO_REPAIR 分支。
+otc_sku_dispense:
+  sku_visual_confidence: 0.97
+  barcode_cross_check_passed: false
+  expiry_date_verified: true
+  stock_deducted_before_dispense: true
+  look_alike_drug_risk_assessed: true
+
+# 第二个 commit：处方图片本身是有的，但执业药师审核这一步尚未完成——这不是
+# "查文档系统就能补"的事实缺口，是法规要求的专业判断本身没有发生，直接 ESCALATE，
+# 不给 AUTO_REPAIR 机会。
+prescription_dispense_pharmacist_review:
+  prescription_uploaded: true
+  pharmacist_review_completed: false
+  pharmacist_review_before_dispense: false
+  drug_interaction_checked: false
+  prescription_source_verifiable: false

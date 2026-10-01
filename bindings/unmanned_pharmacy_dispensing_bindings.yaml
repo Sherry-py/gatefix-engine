@@ -1,0 +1,26 @@
+# bindings/unmanned_pharmacy_dispensing_bindings.yaml —— 无人药房发药场景执行者绑定
+#
+# 发起动作的"执行者"是取药机械臂/具身机器人本身（不是另一个人类角色代为执行），
+# 非 PASS 时的终审方是执业药师或门店负责人——见 README「换个执行者：如果是
+# 具身机器人来做这几步，还需要这道门吗」一节里同样的分层逻辑：判定引擎不需要
+# 知道执行者是人、脚本还是机器人，这里绑定的只是"谁执行这一步"。
+
+bindings:
+
+  otc_sku_dispense:
+    executor_type: robot
+    executor: "无人药房取药机器人（视觉 SKU 识别 + 机械臂取药）→ 门店值班药师（仅 ESCALATE 时终审）"
+    channel: "自助机/线上下单 → 机器人视觉识别 SKU → 机械臂取药 → 取药口递交"
+    incentive: "O2O 发药自动化、门店零改造快速部署"
+
+  prescription_dispense_pharmacist_review:
+    executor_type: robot
+    executor: "无人药房取药机器人 → 执业药师（处方审核，ESCALATE 时终审）"
+    channel: "顾客上传/线上处方 → 机器人识别处方药 SKU → 需药师审核后方可发药"
+    incentive: "处方药 O2O 发药自动化"
+
+  controlled_substance_identity_verify:
+    executor_type: robot
+    executor: "无人药房取药机器人 → 门店值班药师/负责人（终审，不经 4D-CQ 判定）"
+    channel: "顾客申请购买管制类药品 → 身份核验/限量核查 → 药师直接决定"
+    incentive: "合规前提下探索管制类药品的部分自动化流程"

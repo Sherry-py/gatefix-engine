@@ -1,0 +1,26 @@
+# evidence/unitree_humanoid_evidence.yaml —— 宇树人形机器人公开事故的证据快照
+#
+# 如实说明——这份证据不是构造出来的假设场景，是根据公开报道反推的"事故发生
+# 当时，这几项证据是否成立"。反推逻辑：碰撞/剧烈甩动已经真实发生，说明能
+# 防住它的机制在那一刻要么不存在、要么没生效——这是从结果反推前提是否成立，
+# 不是虚构。凡是报道没有明确给出的字段，按"没有公开证据证明其存在"处理，
+# 不代表确认其一定不存在——这条边界在下面每个字段都标注了信源依据/推断依据。
+
+# 第一个 commit：2025-08-15 事故。confidence 高的字段（测试覆盖缺口）直接引用
+# 报道原文；confidence 低的字段（是否有实时偏离检测/急停）按"发生了碰撞，
+# 说明没有有效拦截"反推，标注为推断。
+high_speed_track_deviation_human_contact:
+  test_coverage_includes_high_speed_human_interaction: false  # 报道原文：2000 小时测试历史，但"缺乏动态平衡测试、缺乏突发障碍物识别"
+  real_time_path_deviation_detection: false  # 推断：偏离赛道后无公开证据显示被实时检测拦截
+  emergency_stop_triggered_before_contact: false  # 推断：碰撞已发生，说明急停未在接触前触发（或不存在）
+  closed_loop_test_hours: 2000  # 报道原文数字，仅作背景说明，不参与打分
+
+# 第二个 commit：2025-05 工厂/测试场地事故。root_cause_publicly_confirmed=true——
+# 这是这个 case 和第一个 commit 的区别：厂商侧/技术媒体对根因（张力信号被误判
+# 为跌倒）给出了相对具体的解释，说明"至少愿意公开根因"，但这不等于约束/回退
+# 机制已经被修复，其余三项字段仍按"剧烈甩动已发生，说明未生效"反推。
+sensor_ambiguity_stabilization_runaway:
+  conflicting_sensor_signal_detected_as_anomaly: false  # 推断：张力信号被直接采信为"持续跌倒"，未被识别为信号矛盾/异常状态本身
+  correction_force_rate_bounded: false  # 推断：修正力度持续加码直至剧烈甩动，说明未见硬性上限约束
+  fallback_to_safe_stop_on_signal_conflict: false  # 推断：未观察到回退至安全停止，而是继续激进修正
+  root_cause_publicly_confirmed: true  # 报道原文：媒体/相关分析对根因（张力信号误判）给出了具体解释

@@ -1,5 +1,7 @@
 # GateFix：亲历真实案例逼出的 Agent Guardrails
 
+**简体中文** ｜ [English](README.en.md)
+
 [![CI](https://github.com/Sherry-py/gatefix-engine/actions/workflows/ci.yml/badge.svg)](https://github.com/Sherry-py/gatefix-engine/actions/workflows/ci.yml)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](LICENSE)
 

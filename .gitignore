@@ -2,3 +2,6 @@ __pycache__/
 *.pyc
 .DS_Store
 gate_audit_log.jsonl
+
+# 本机 MCP 配置（含本机路径），不提交
+.mcp.json

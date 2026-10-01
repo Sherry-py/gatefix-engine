@@ -1,0 +1,18 @@
+# bindings/unitree_humanoid_bindings.yaml —— 宇树人形机器人公开场景执行者绑定
+#
+# 执行者是机器人本身的运动控制/姿态修正策略；两起事故里都没有一个实时介入
+# 阻断这个动作的角色——这本身就是这份分析要指出的缺口，不是绑定信息缺失。
+
+bindings:
+
+  high_speed_track_deviation_human_contact:
+    executor_type: robot
+    executor: "宇树人形机器人（H1，自主/半自主运动控制策略）→ 事故发生前无实时人工/系统介入角色；事后由现场安全负责人/工程团队复盘"
+    channel: "预设路径/竞速类场景下的自主高速运动执行"
+    incentive: "展示自主运动能力、竞速类场景商业化/品牌曝光"
+
+  sensor_ambiguity_stabilization_runaway:
+    executor_type: robot
+    executor: "宇树人形机器人（H1，姿态稳定控制算法）→ 事故发生前无实时人工介入角色；事后由测试/工程团队复盘"
+    channel: "测试场地内的姿态稳定控制回路，牵引绳等外部约束存在时的信号处理"
+    incentive: "测试验证机器人平衡与稳定能力"

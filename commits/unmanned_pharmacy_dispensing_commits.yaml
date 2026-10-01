@@ -1,0 +1,52 @@
+# commits/unmanned_pharmacy_dispensing_commits.yaml —— 无人药房具身发药场景
+# （case=unmanned_pharmacy_dispensing）的 commit 点定义
+#
+# 如实说明——这不是 sydney_move 那样的真实个人案例，也不是对任何一家公司真实
+# 内部系统的转录或还原。这是一个假设性场景：法规依据真实（《中华人民共和国药品
+# 管理法》第五十八条——药品经营企业销售处方药，应当经过依法经过资格认定的
+# 药学技术人员审核；《精神药品管理办法》对第二类精神药品的实名登记、限量销售
+# 有强制要求），具体情节（视觉 SKU 识别、无人取药机械臂、O2O 发药）是参照公开
+# 披露的无人药房商业化信息（穹彻智能 2026 商业计划书公开章节：99% 挑选准确率、
+# 零改造门店部署、70 万家门店的目标市场）构造出来的示范场景，用来验证
+# GateFix 的 4D-CQ 判定逻辑在"具身机器人执行、且直接涉及公众用药安全"这类
+# commit 点上该怎么设计——不代表任何公司真实系统的实际实现，未经任何公司确认，
+# 阈值/置信度数字是代表性示例，不是真实业务数据。这份 case 目前只在本地工作树里，
+# 未提交进这个公开仓库（是否公开是另一个决定，见分析备忘）。
+#
+# 场景：一台无人药房取药机器人，接到线上/自助机下单后，从货架取药、核验、
+# 经取药口递交给顾客——期间要经过三个性质不同的不可逆决策点。
+
+commits:
+
+  - id: otc_sku_dispense
+    name_cn: "非处方药（OTC）发药"
+    irreversibility: "药品一旦从取药口递出即视为完成交付——已流通药品不得退回上架（污染/拆封风险），且顾客可能已服用"
+    cost_reverse: inf
+    value_tier: low
+    cost_fix: 0
+    precondition_fn: score_otc_sku_dispense
+    risk_ext:
+      p_inspect: 0.02
+      loss_if_inspected: 500
+      note: "即使 route=PASS，纯视觉识别仍存在小概率误判导致顾客事后异议/投诉的残余风险，代表性量级，不因放行而清零"
+
+  - id: prescription_dispense_pharmacist_review
+    name_cn: "处方药发药——执业药师审核"
+    irreversibility: "处方药一旦发出即视为完成销售，直接影响患者用药安全，不可逆"
+    cost_reverse: inf
+    value_tier: mid
+    cost_fix: 0
+    precondition_fn: score_prescription_dispense_pharmacist_review
+
+  - id: controlled_substance_identity_verify
+    name_cn: "管制类药品（如第二类精神药品）身份核验与限量销售判断"
+    irreversibility: "药品一旦发出且购买人身份/资质有误，无法追回，且涉及药品滥用风险"
+    cost_reverse: inf
+    value_tier: high
+    cost_fix: 0
+    bypass_to_human: true
+    bypass_reason: >
+      购买人身份核验（实名登记比对）、既往购药记录核查、限量销售合规性判断，
+      属于人情/资质类判断——证据不是"够不够格"的问题，是机器根本组装不了的
+      判断类型（身份证真伪、是否本人代领、购药动机是否合理），必须药师/门店
+      负责人直接终审，不进入 4D-CQ 自动判定，也不给 AUTO_REPAIR 机会。
